@@ -1,150 +1,187 @@
 # Sealos CLI
 
-一个强大的命令行工具，让开发者可以通过终端轻松管理 Sealos 云平台资源。
+Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and object storage
 
-## ✨ 特性
+## Project Structure
 
-- 🚀 **快速部署** - 一键创建开发环境和应用
-- 💻 **开发友好** - 支持 VSCode/Cursor 直接连接
-- 📦 **对象存储** - 简单的文件上传和静态网站托管
-- 🗄️ **数据库管理** - 轻松创建和管理各类数据库
-- 🔐 **安全认证** - OAuth 2.0 浏览器授权登录
-- ⚙️ **灵活配置** - 支持配置文件和环境变量
-
-## 📦 安装
-
-```bash
-# macOS / Linux
-curl -fsSL https://get.sealos.io/cli | bash
-
-# 或者使用 Homebrew
-brew install sealos/tap/sealos
-
-# 验证安装
-sealos version
+```
+src/
+├── bin/
+│   └── cli.ts                 # CLI entry point
+├── commands/                  # Command modules
+│   ├── auth/                 # Authentication commands
+│   │   ├── login.ts
+│   │   ├── logout.ts
+│   │   ├── whoami.ts
+│   │   └── index.ts
+│   ├── workspace/            # Workspace management
+│   │   └── index.ts
+│   ├── devbox/               # Devbox management
+│   │   └── index.ts
+│   ├── s3/                   # S3 object storage
+│   │   └── index.ts
+│   ├── database/             # Database management
+│   │   └── index.ts
+│   ├── template/             # Template management
+│   │   └── index.ts
+│   ├── quota/                # Resource quotas
+│   │   └── index.ts
+│   ├── app/                  # Application management
+│   │   └── index.ts
+│   └── config/               # CLI configuration
+│       └── index.ts
+├── lib/                       # Shared libraries
+│   ├── api.ts                # API client
+│   ├── config.ts             # Configuration management
+│   ├── errors.ts             # Error handling
+│   └── output.ts             # Output formatting
+├── types/                     # TypeScript type definitions
+│   └── index.ts
+└── main.ts                    # Main program setup
 ```
 
-## 🚀 快速开始
+## Architecture
 
+### Configuration Management (`lib/config.ts`)
+- Manages CLI configuration at `~/.sealos/config.json`
+- Handles multiple contexts (hosts/workspaces)
+- Supports environment variables (e.g., `KUBECONFIG`)
+
+### API Client (`lib/api.ts`)
+- Axios-based HTTP client with interceptors
+- Automatic token injection from current context
+- Unified error handling
+- Support for KUBECONFIG environment variable
+
+### Output Formatting (`lib/output.ts`)
+- Support for multiple formats: JSON, YAML, Table
+- Colored terminal output using chalk
+- Loading spinners using ora
+- Table formatting using table
+
+### Error Handling (`lib/errors.ts`)
+- Typed error classes (AuthError, ConfigError, ApiError)
+- Global error handler
+- User-friendly error messages
+
+## Development
+
+### Install Dependencies
 ```bash
-# 1. 登录到 Sealos
-sealos login hzh.sealos.run
-
-# 2. 创建开发环境
-sealos devbox create . --template=nextjs
-
-# 3. 连接到开发环境
-sealos devbox connect my-devbox --ide=cursor
-
-# 4. 查看所有资源
-sealos devbox list
-sealos quota
+npm install
 ```
 
-## 📚 主要功能
-
-### Devbox 开发环境
-
+### Run CLI in Development
 ```bash
-# 创建开发环境
-sealos devbox create /path/to/project \
-  --template=nextjs \
-  --cpu=2c \
-  --memory=4g
+npm start -- <command>
 
-# 连接到 IDE
-sealos devbox connect my-devbox --ide=vscode
+# Examples:
+npm start -- --help
+npm start -- login
+npm start -- devbox list
+```
 
-# 管理开发环境
+### Build
+```bash
+npm run build
+```
+
+### Test
+```bash
+npm test
+```
+
+## Usage Examples
+
+### Authentication
+```bash
+# Login with token
+sealos login hzh.sealos.run --token YOUR_TOKEN
+
+# Check current user
+sealos whoami
+
+# Logout
+sealos logout
+```
+
+### Workspace Management
+```bash
+# List workspaces
+sealos workspace list
+
+# Switch workspace
+sealos workspace switch production
+
+# Show current workspace
+sealos workspace current
+```
+
+### Devbox Management
+```bash
+# Create a devbox
+sealos devbox create --name my-devbox --template nextjs --cpu 2c --memory 4g
+
+# List devboxes
 sealos devbox list
-sealos devbox stop my-devbox
+sealos devbox list --output json
+
+# Get devbox details
+sealos devbox get my-devbox
+
+# Connect to devbox
+sealos devbox connect my-devbox --ide cursor
+
+# Start/Stop/Restart
 sealos devbox start my-devbox
+sealos devbox stop my-devbox
+sealos devbox restart my-devbox
+
+# Delete devbox
+sealos devbox delete my-devbox --force
 ```
 
-### 对象存储
-
+### Configuration
 ```bash
-# 上传静态网站
-sealos s3 upload ./dist --bucket=my-website
+# List all config
+sealos config list
 
-# 列出文件
-sealos s3 list --bucket=my-bucket
+# Get config value
+sealos config get currentContext
 
-# 删除文件
-sealos s3 delete s3://my-bucket/file.txt
+# Set config value
+sealos config set key value
 ```
 
-### 数据库管理
+## Environment Variables
 
-```bash
-# 创建数据库
-sealos database create postgres --name=my-db
+- `KUBECONFIG`: Path to Kubernetes config file (automatically included in API requests)
+- `DEBUG`: Enable debug mode for verbose error output
 
-# 查看连接信息
-sealos database connection my-db
+## TODO
 
-# 管理数据库
-sealos database list
-sealos database stop my-db
-```
+Most command implementations contain TODO comments indicating where API integration is needed. Key areas:
 
-### 模板市场
+1. **Authentication**: OAuth flow for browser-based login
+2. **API Integration**: Connect all commands to actual Sealos API endpoints
+3. **S3 Operations**: File upload/download with progress tracking
+4. **Database Management**: Full CRUD operations
+5. **Interactive Prompts**: Use inquirer for confirmations
+6. **YAML Support**: Add YAML output formatting
+7. **Config Nesting**: Support nested config key access
 
-```bash
-# 浏览模板
-sealos template list
+## Best Practices Implemented
 
-# 使用模板创建项目
-sealos template create nextjs --name=my-app
-```
+- Modular command structure
+- TypeScript for type safety
+- Shared utilities for common operations
+- Consistent error handling
+- Multiple output formats
+- Environment variable support
+- Configuration file management
+- Loading indicators for async operations
+- Color-coded terminal output
 
-## 📖 常用命令
+## License
 
-| 命令 | 说明 |
-|------|------|
-| `sealos login` | 登录到 Sealos 平台 |
-| `sealos devbox create` | 创建开发环境 |
-| `sealos devbox connect` | 连接到 IDE |
-| `sealos s3 upload` | 上传文件到对象存储 |
-| `sealos database create` | 创建数据库 |
-| `sealos quota` | 查看资源配额 |
-| `sealos template list` | 浏览可用模板 |
-
-## ⚙️ 配置
-
-创建配置文件 `.sealos/devbox.yaml`:
-
-```yaml
-name: my-project
-template: nextjs
-resources:
-  cpu: 2c
-  memory: 4g
-ports:
-  - 3000
-env:
-  NODE_ENV: development
-```
-
-## 📋 系统要求
-
-- macOS 10.15+ / Linux / Windows (WSL2)
-- 网络连接
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-Apache License 2.0
-
-## 🔗 相关链接
-
-- [官方文档](https://docs.sealos.io)
-- [Sealos 云平台](https://sealos.io)
-- [问题反馈](https://github.com/labring/sealos/issues)
-
----
-
-**让云开发回归简单** ☁️
+Apache-2.0
