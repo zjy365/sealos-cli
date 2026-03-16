@@ -108,7 +108,7 @@ export function removeContext (name: string): void {
 
   // If removing current context, clear currentContext
   if (config.currentContext === name) {
-    config.currentContext = config.contexts.length > 0 ? config.contexts[0].name : ''
+    config.currentContext = config.contexts.length > 0 ? config.contexts[0]!.name : ''
   }
 
   writeConfig(config)
@@ -129,6 +129,6 @@ export function getConfigValue (key: string): string | undefined {
 export function setConfigValue (key: string, value: string): void {
   const config = readConfig()
   // TODO: Implement nested key setting
-  (config as any)[key] = value
+  ;(config as any)[key] = value
   writeConfig(config)
 }
