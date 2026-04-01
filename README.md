@@ -141,6 +141,27 @@ sealos devbox restart my-devbox
 sealos devbox delete my-devbox --force
 ```
 
+### Database Management
+```bash
+# List databases
+sealos database list
+
+# Get database details
+sealos database get my-db
+
+# Create a database
+sealos database create postgresql --name my-db --cpu 1 --memory 2 --storage 5 --replicas 1
+
+# Show connection details
+sealos database connection my-db
+
+# More commands
+sealos database --help
+sealos database <subcommand> --help
+```
+
+Implementation: `src/commands/database/index.ts`
+
 ### Configuration
 ```bash
 # List all config
@@ -165,7 +186,7 @@ Most command implementations contain TODO comments indicating where API integrat
 1. **Authentication**: OAuth flow for browser-based login
 2. **API Integration**: Connect all commands to actual Sealos API endpoints
 3. **S3 Operations**: File upload/download with progress tracking
-4. **Database Management**: Full CRUD operations
+4. **Devbox Management**: Connect devbox commands to actual Sealos API endpoints
 5. **Interactive Prompts**: Use inquirer for confirmations
 6. **YAML Support**: Add YAML output formatting
 7. **Config Nesting**: Support nested config key access

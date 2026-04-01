@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "start": "node --import tsx src/bin/cli.ts",
-    "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts",
+    "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts && openapi-typescript src/docs/database_openapi.json -o src/generated/database.ts",
     "build": "npm run generate:api && tsc && tsup",
     "lint": "eslint . && npm run lint:lockfile && npm run lint:markdown",
     "lint:markdown": "npx -y markdownlint-cli@0.45.0 -c .github/.markdownlint.yml -i '.git' -i '__tests__' -i '.github' -i '.changeset' -i 'CODE_OF_CONDUCT.md' -i 'CHANGELOG.md' -i 'docs/**' -i 'node_modules' -i 'dist' '**/**.md' --fix",
