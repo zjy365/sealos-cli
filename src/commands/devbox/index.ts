@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import { getCurrentContext } from '../../lib/config.ts'
 import { success, spinner, outputTable, formatOutput, info } from '../../lib/output.ts'
 import { handleError, AuthError } from '../../lib/errors.ts'
+import { createApiClient } from '../../lib/api.ts'
 
 export function createDevboxCommand (): Command {
   const devboxCmd = new Command('devbox')
@@ -31,6 +32,7 @@ export function createDevboxCommand (): Command {
         // TODO: 实现创建 devbox
         // 1. 读取配置文件（如果有）
         // 2. 调用 API 创建 devbox
+        const api = createApiClient()
         // const result = await api.post('/api/v1/devbox', {
         //   name: options.name,
         //   template: options.template,
@@ -44,7 +46,7 @@ export function createDevboxCommand (): Command {
         // 4. 返回访问地址
 
         spin.succeed('Devbox created successfully')
-        success('Devbox URL: https://example.sealos.run')
+        success(`Devbox URL: https://example.sealos.run`)
         info(`Run "sealos devbox connect ${options.name || 'devbox'}" to connect`)
       } catch (error) {
         handleError(error)
@@ -65,6 +67,9 @@ export function createDevboxCommand (): Command {
         }
 
         // TODO: 调用 API 获取 devbox 列表
+        const api = createApiClient()
+        // const devboxes = await api.get('/api/v1/devboxes')
+
         // 示例数据
         const data = [
           ['NAME', 'STATUS', 'CPU', 'MEMORY', 'CREATED'],
@@ -97,6 +102,9 @@ export function createDevboxCommand (): Command {
         }
 
         // TODO: 调用 API 获取 devbox 信息
+        const api = createApiClient()
+        // const devbox = await api.get(`/api/v1/devboxes/${name}`)
+
         const data = [
           ['Field', 'Value'],
           ['Name', name],
@@ -134,6 +142,9 @@ export function createDevboxCommand (): Command {
         const spin = spinner(`${action}ing devbox...`)
 
         // TODO: 实现对应操作
+        const api = createApiClient()
+        // await api.post(`/api/v1/devboxes/${name}/${action}`)
+
         spin.succeed(`Devbox ${action}ed successfully`)
       } catch (error) {
         handleError(error)
@@ -180,6 +191,9 @@ export function createDevboxCommand (): Command {
         const spin = spinner('Publishing devbox...')
 
         // TODO: 实现发布 devbox
+        const api = createApiClient()
+        // await api.post(`/api/v1/devboxes/${name}/publish`)
+
         spin.succeed('Devbox published successfully')
       } catch (error) {
         handleError(error)

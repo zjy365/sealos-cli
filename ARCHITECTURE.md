@@ -7,10 +7,9 @@ This CLI follows Node.js best practices with a modular, maintainable structure.
 ## Module Organization
 
 ### 1. Commands (`src/commands/`)
-
 Each command module is self-contained with its own directory:
 
-```text
+```
 commands/
   auth/           - login, logout, whoami
   workspace/      - workspace management
@@ -28,20 +27,17 @@ Each module exports factory functions that create Commander.js command instances
 ### 2. Shared Libraries (`src/lib/`)
 
 #### `config.ts` - Configuration Management
-
 - Reads/writes `~/.sealos/config.json`
 - Manages contexts (host, token, workspace)
 - Helper functions for context switching
 
 #### `api.ts` - HTTP Client
-
 - Axios-based client with interceptors
 - Automatic authentication via Bearer token
 - KUBECONFIG environment variable support
 - Unified error handling (401 → AuthError)
 
 #### `output.ts` - Output Formatting
-
 - `outputJson()` - JSON output
 - `outputYaml()` - YAML output (TODO)
 - `outputTable()` - Table formatting
@@ -49,7 +45,6 @@ Each module exports factory functions that create Commander.js command instances
 - `spinner()` - Loading indicators
 
 #### `errors.ts` - Error Handling
-
 - `CliError` - Base error class
 - `AuthError` - Authentication errors
 - `ConfigError` - Configuration errors
@@ -57,7 +52,6 @@ Each module exports factory functions that create Commander.js command instances
 - `handleError()` - Global error handler
 
 ### 3. Type Definitions (`src/types/`)
-
 - TypeScript interfaces for configuration
 - API request/response types
 - Shared type definitions
@@ -65,19 +59,17 @@ Each module exports factory functions that create Commander.js command instances
 ### 4. Entry Points
 
 #### `src/main.ts`
-
 - Creates Commander.js program
 - Registers all command modules
 - Sets up global error handling
 
 #### `src/bin/cli.ts`
-
 - CLI entry point
 - Calls `runCLI()` from main.ts
 
 ## Data Flow
 
-```text
+```
 User Command
     ↓
 CLI Entry (bin/cli.ts)
@@ -98,9 +90,7 @@ File          to Sealos     Display     & Exit
 ## Key Design Patterns
 
 ### 1. Factory Pattern
-
 Commands are created via factory functions:
-
 ```typescript
 export function createDevboxCommand(): Command {
   const cmd = new Command('devbox')
@@ -110,25 +100,19 @@ export function createDevboxCommand(): Command {
 ```
 
 ### 2. Centralized Configuration
-
 All config operations go through `lib/config.ts`:
-
 ```typescript
 const context = getCurrentContext()
 upsertContext(newContext)
 ```
 
 ### 3. Interceptor Pattern
-
 API client uses axios interceptors for:
-
 - Adding auth tokens to requests
 - Converting 401 errors to AuthError
 
 ### 4. Error Wrapping
-
 All command actions wrapped in try/catch:
-
 ```typescript
 .action(async (name) => {
   try {
@@ -171,7 +155,6 @@ Location: `~/.sealos/config.json`
 5. Use shared utilities from `lib/`
 
 Example:
-
 ```typescript
 // src/commands/example/index.ts
 import { Command } from 'commander'
@@ -218,7 +201,7 @@ export function createExampleCommand(): Command {
 
 ### Flow
 
-```text
+```
 OpenAPI Spec (src/docs/*.json)
        │
        │  npx openapi-typescript (generated at build time)
@@ -250,7 +233,7 @@ src/commands/template/index.ts (all subcommands)
 
 `sealos login <host>` without `-t` triggers the device authorization flow. With `-t` the kubeconfig is saved directly.
 
-```text
+```
 sealos login <host>
        │
        ▼
@@ -279,7 +262,7 @@ config.ts: upsertContext({ name, host, token: kubeconfig, workspace })
 
 After login, the kubeconfig is stored as `context.token`. API calls obtain it via `auth.ts`:
 
-```text
+```
 auth.ts: getToken() → getCurrentContext().token
        │
        ▼

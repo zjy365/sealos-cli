@@ -4,7 +4,7 @@ Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and
 
 ## Project Structure
 
-```text
+```
 src/
 ├── bin/
 │   └── cli.ts                 # CLI entry point
@@ -43,27 +43,23 @@ src/
 ## Architecture
 
 ### Configuration Management (`lib/config.ts`)
-
 - Manages CLI configuration at `~/.sealos/config.json`
 - Handles multiple contexts (hosts/workspaces)
 - Supports environment variables (e.g., `KUBECONFIG`)
 
 ### API Client (`lib/api.ts`)
-
 - Axios-based HTTP client with interceptors
 - Automatic token injection from current context
 - Unified error handling
 - Support for KUBECONFIG environment variable
 
 ### Output Formatting (`lib/output.ts`)
-
 - Support for multiple formats: JSON, YAML, Table
 - Colored terminal output using chalk
 - Loading spinners using ora
 - Table formatting using table
 
 ### Error Handling (`lib/errors.ts`)
-
 - Typed error classes (AuthError, ConfigError, ApiError)
 - Global error handler
 - User-friendly error messages
@@ -71,13 +67,11 @@ src/
 ## Development
 
 ### Install Dependencies
-
 ```bash
 npm install
 ```
 
 ### Run CLI in Development
-
 ```bash
 npm start -- <command>
 
@@ -88,13 +82,11 @@ npm start -- devbox list
 ```
 
 ### Build
-
 ```bash
 npm run build
 ```
 
 ### Test
-
 ```bash
 npm test
 ```
@@ -102,7 +94,6 @@ npm test
 ## Usage Examples
 
 ### Authentication
-
 ```bash
 # Login in browser and exchange for kubeconfig automatically
 sealos login hzh.sealos.run
@@ -118,7 +109,6 @@ sealos logout
 ```
 
 ### Template Management
-
 ```bash
 # Deploy from the catalog
 sealos template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
@@ -128,7 +118,6 @@ sealos template deploy --file ./template.yaml --dry-run
 ```
 
 ### Workspace Management
-
 ```bash
 # List workspaces
 sealos workspace list
@@ -141,7 +130,6 @@ sealos workspace current
 ```
 
 ### Devbox Management
-
 ```bash
 # Create a devbox
 sealos devbox create --name my-devbox --template nextjs --cpu 2c --memory 4g
@@ -166,7 +154,6 @@ sealos devbox delete my-devbox --force
 ```
 
 ### Database Management
-
 ```bash
 # List databases
 sealos database list
@@ -188,7 +175,6 @@ sealos database <subcommand> --help
 Implementation: `src/commands/database/index.ts`
 
 ### Configuration
-
 ```bash
 # List all config
 sealos config list
