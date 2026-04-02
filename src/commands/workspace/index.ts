@@ -1,8 +1,7 @@
 import { Command } from 'commander'
-import { getCurrentContext, setCurrentContext, readConfig } from '../../lib/config.ts'
+import { getCurrentContext } from '../../lib/config.ts'
 import { success, outputTable, info } from '../../lib/output.ts'
 import { handleError, AuthError } from '../../lib/errors.ts'
-import { createApiClient } from '../../lib/api.ts'
 
 export function createWorkspaceCommand (): Command {
   const workspaceCmd = new Command('workspace')
@@ -45,9 +44,6 @@ export function createWorkspaceCommand (): Command {
         }
 
         // TODO: 调用 API 获取 workspace 列表
-        const api = createApiClient()
-        // const workspaces = await api.get('/api/v1/workspaces')
-
         // 示例数据
         const data = [
           ['NAME', 'STATUS', 'CURRENT'],
