@@ -231,7 +231,7 @@ src/commands/template/index.ts (all subcommands)
 
 ### Authentication: OAuth2 Device Grant Flow (RFC 8628)
 
-`sealos login <host>` without `-t` triggers the device authorization flow. With `-t` the token is saved directly.
+`sealos login <host>` without `-t` triggers the device authorization flow. With `-t` the kubeconfig is saved directly.
 
 ```
 sealos login <host>

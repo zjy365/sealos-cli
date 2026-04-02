@@ -95,14 +95,26 @@ npm test
 
 ### Authentication
 ```bash
-# Login with token
-sealos login hzh.sealos.run --token YOUR_TOKEN
+# Login in browser and exchange for kubeconfig automatically
+sealos login hzh.sealos.run
+
+# Login with kubeconfig content
+sealos login hzh.sealos.run --token "$(cat ~/.kube/config)"
 
 # Check current user
 sealos whoami
 
 # Logout
 sealos logout
+```
+
+### Template Management
+```bash
+# Deploy from the catalog
+sealos template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
+
+# Validate raw template YAML without creating resources
+sealos template deploy --file ./template.yaml --dry-run
 ```
 
 ### Workspace Management
