@@ -6,7 +6,17 @@ import { type ApiErrorBody, mapApiError } from '../../lib/errors.ts'
 import { outputJson, outputTable } from '../../lib/output.ts'
 import { withAuth, withErrorHandling } from '../../lib/with-auth.ts'
 
-function parseSetArgs (sets: string[]): Record<string, string> {
+interface TemplateDeployOptions {
+  name?: string
+  file?: string
+  yaml?: string
+  set: string[]
+  dryRun?: boolean
+}
+
+export type TemplateDeployMode = 'catalog' | 'raw'
+
+export function parseSetArgs (sets: string[]): Record<string, string> {
   const args: Record<string, string> = {}
   for (const s of sets) {
     const idx = s.indexOf('=')
@@ -44,10 +54,141 @@ async function resolveYaml (options: { file?: string; yaml?: string }, spinner: 
   return content
 }
 
+export function resolveTemplateDeployMode (
+  template: string | undefined,
+  options: TemplateDeployOptions,
+  stdinIsTTY: boolean = process.stdin.isTTY
+): TemplateDeployMode {
+  const isRaw = !!(options.file || options.yaml || !stdinIsTTY)
+
+  if (template && isRaw) {
+    throw new Error('Cannot specify both a template name and --file/--yaml/stdin. Use one or the other.')
+  }
+  if (!template && !isRaw) {
+    throw new Error('Provide a template name or use --file/--yaml/stdin to supply raw YAML.')
+  }
+  if (template) {
+    if (!options.name) {
+      throw new Error('--name is required when deploying from the template catalog.')
+    }
+    if (options.dryRun) {
+      throw new Error('--dry-run is only supported for raw template deploys (--file, --yaml, or stdin).')
+    }
+    return 'catalog'
+  }
+
+  return 'raw'
+}
+
+export function buildCatalogTemplateDeployBody (
+  template: string,
+  options: Pick<TemplateDeployOptions, 'name' | 'set'>
+): { name: string; template: string; args?: Record<string, string> } {
+  const body: { name: string; template: string; args?: Record<string, string> } = {
+    name: options.name!,
+    template
+  }
+  if (options.set.length > 0) {
+    body.args = parseSetArgs(options.set)
+  }
+  return body
+}
+
+export function buildRawTemplateDeployBody (
+  yaml: string,
+  options: Pick<TemplateDeployOptions, 'set' | 'dryRun'>
+): { yaml: string; args?: Record<string, string>; dryRun?: boolean } {
+  const body: { yaml: string; args?: Record<string, string>; dryRun?: boolean } = {
+    yaml
+  }
+  if (options.set.length > 0) {
+    body.args = parseSetArgs(options.set)
+  }
+  if (options.dryRun) {
+    body.dryRun = true
+  }
+  return body
+}
+
 export function createTemplateCommand (): Command {
   const tplCmd = new Command('template')
     .alias('tpl')
     .description('Manage templates')
+
+  const deployTemplate = withAuth({
+    spinnerText: 'Deploying template...'
+  }, async (
+    ctx,
+    catalogTemplate: string | undefined,
+    deployOptions: TemplateDeployOptions,
+    deployMode: TemplateDeployMode
+  ) => {
+    const client = createTemplateClient()
+
+    // ── deploy from catalog ──
+    if (deployMode === 'catalog') {
+      const body = buildCatalogTemplateDeployBody(catalogTemplate!, deployOptions)
+      const { data, error, response } = await client.POST('/templates/instances', {
+        headers: ctx.auth,
+        body
+      })
+
+      if (error) throw mapApiError(response.status, error as ApiErrorBody)
+
+      ctx.spinner.succeed(`Instance "${data.name}" created successfully from catalog template "${catalogTemplate}"`)
+      console.log(chalk.dim(`  UID:     ${data.uid}`))
+      console.log(chalk.dim(`  Created: ${data.createdAt}`))
+
+      if (data.resources && data.resources.length > 0) {
+        console.log(chalk.dim('\n  Resources:'))
+        const rows: string[][] = [
+          [chalk.bold('Name'), chalk.bold('Type'), chalk.bold('CPU'), chalk.bold('Memory'), chalk.bold('Storage')]
+        ]
+        for (const r of data.resources) {
+          rows.push([
+            r.name,
+            r.resourceType,
+            r.quota?.cpu != null ? `${r.quota.cpu} vCPU` : '-',
+            r.quota?.memory != null ? `${r.quota.memory} GiB` : '-',
+            r.quota?.storage != null ? `${r.quota.storage} GiB` : '-'
+          ])
+        }
+        outputTable(rows)
+      }
+      return
+    }
+
+    // ── deploy from raw YAML ──
+    const yamlContent = await resolveYaml(deployOptions, ctx.spinner)
+    const body = buildRawTemplateDeployBody(yamlContent, deployOptions)
+
+    const { data, error, response } = await client.POST('/templates/raw', {
+      headers: ctx.auth,
+      body
+    })
+
+    if (error) throw mapApiError(response.status, error as ApiErrorBody)
+
+    if (deployOptions.dryRun) {
+      ctx.spinner.succeed('Raw template validation passed; no resources were created')
+      console.log(chalk.dim(`  Name: ${data.name}`))
+      if (data.resources && data.resources.length > 0) {
+        console.log(chalk.dim('\n  Resources that would be created:'))
+        for (const r of data.resources) {
+          console.log(chalk.dim(`    - ${r.resourceType}: ${r.name}`))
+        }
+      }
+      return
+    }
+
+    ctx.spinner.succeed(`Raw template deployed as "${data.name}"`)
+    if ('uid' in data) {
+      console.log(chalk.dim(`  UID:     ${data.uid}`))
+    }
+    if ('createdAt' in data) {
+      console.log(chalk.dim(`  Created: ${data.createdAt}`))
+    }
+  })
 
   // ── list ─────────────────────────────────────────────────────────
   tplCmd
@@ -123,6 +264,7 @@ export function createTemplateCommand (): Command {
         console.log(`    CPU:       ${data.quota.cpu} vCPU`)
         console.log(`    Memory:    ${data.quota.memory} GiB`)
         console.log(`    Storage:   ${data.quota.storage} GiB`)
+        console.log(`    NodePort:  ${data.quota.nodeport}`)
       }
 
       const argEntries = Object.entries(data.args)
@@ -152,85 +294,21 @@ export function createTemplateCommand (): Command {
     .option('--file <path>', 'Path to template YAML file')
     .option('--yaml <yaml>', 'Template YAML string')
     .option('--set <KEY=VALUE...>', 'Set template arguments', (val: string, prev: string[]) => [...prev, val], [] as string[])
-    .option('--dry-run', 'Validate without creating resources')
-    .action(withAuth({ spinnerText: 'Deploying template...' }, async (ctx, template: string | undefined, options: { name?: string; file?: string; yaml?: string; set: string[]; dryRun?: boolean }) => {
-      const client = createTemplateClient()
-      const args = options.set.length > 0 ? parseSetArgs(options.set) : undefined
-      const isRaw = !!(options.file || options.yaml || !process.stdin.isTTY)
+    .option('--dry-run', 'Validate raw template YAML without creating resources')
+    .addHelpText('after', `
+Examples:
+  Catalog:
+    sealos template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
 
-      if (template && isRaw) {
-        throw new Error('Cannot specify both a template name and --file/--yaml/stdin. Use one or the other.')
-      }
-      if (!template && !isRaw) {
-        throw new Error('Provide a template name or use --file/--yaml/stdin to supply raw YAML.')
-      }
-
-      // ── deploy from catalog ──
-      if (template) {
-        if (!options.name) {
-          throw new Error('--name is required when deploying from the template catalog.')
-        }
-
-        const { data, error, response } = await client.POST('/templates/instances', {
-          headers: ctx.auth,
-          body: { name: options.name, template, args }
-        })
-
-        if (error) throw mapApiError(response.status, error as ApiErrorBody)
-
-        ctx.spinner.succeed(`Instance "${data.name}" created successfully`)
-        console.log(chalk.dim(`  UID:     ${data.uid}`))
-        console.log(chalk.dim(`  Created: ${data.createdAt}`))
-
-        if (data.resources && data.resources.length > 0) {
-          console.log(chalk.dim('\n  Resources:'))
-          const rows: string[][] = [
-            [chalk.bold('Name'), chalk.bold('Type'), chalk.bold('CPU'), chalk.bold('Memory'), chalk.bold('Storage')]
-          ]
-          for (const r of data.resources) {
-            rows.push([
-              r.name,
-              r.resourceType,
-              r.quota?.cpu != null ? `${r.quota.cpu} vCPU` : '-',
-              r.quota?.memory != null ? `${r.quota.memory} GiB` : '-',
-              r.quota?.storage != null ? `${r.quota.storage} GiB` : '-'
-            ])
-          }
-          outputTable(rows)
-        }
-        return
-      }
-
-      // ── deploy from raw YAML ──
-      const yamlContent = await resolveYaml(options, ctx.spinner)
-
-      const { data, error, response } = await client.POST('/templates/raw', {
-        headers: ctx.auth,
-        body: { yaml: yamlContent, args, dryRun: options.dryRun }
-      })
-
-      if (error) throw mapApiError(response.status, error as ApiErrorBody)
-
-      if (options.dryRun) {
-        ctx.spinner.succeed('Dry-run validation passed')
-        console.log(chalk.dim(`  Name: ${data.name}`))
-        if (data.resources && data.resources.length > 0) {
-          console.log(chalk.dim('\n  Resources that would be created:'))
-          for (const r of data.resources) {
-            console.log(chalk.dim(`    - ${r.resourceType}: ${r.name}`))
-          }
-        }
-        return
-      }
-
-      ctx.spinner.succeed(`Template deployed as "${data.name}"`)
-      if ('uid' in data) {
-        console.log(chalk.dim(`  UID:     ${data.uid}`))
-      }
-      if ('createdAt' in data) {
-        console.log(chalk.dim(`  Created: ${data.createdAt}`))
-      }
-    }))
+  Raw:
+    sealos template deploy --file ./template.yaml --dry-run
+    sealos template deploy --yaml 'apiVersion: app.sealos.io/v1\nkind: Template\n...'
+    cat template.yaml | sealos template deploy --dry-run
+`)
+    .action(async (template: string | undefined, options: TemplateDeployOptions) => {
+      const mode = resolveTemplateDeployMode(template, options)
+      await deployTemplate(template, options, mode)
+    })
 
   return tplCmd
 }

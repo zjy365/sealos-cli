@@ -11,7 +11,7 @@ export function getToken (): string | null {
 
 /**
  * Get auth headers for API calls.
- * Uses the token stored via `sealos login -t <token>`.
+ * Uses the kubeconfig stored via `sealos login -t <kubeconfig>` or browser login.
  * The OpenAPI kubeconfigAuth scheme expects URL-encoded kubeconfig in Authorization header.
  */
 export function getAuthHeaders (): { Authorization: string } | null {

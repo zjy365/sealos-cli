@@ -10,7 +10,30 @@ function resolveHost (options?: { baseUrl?: string }): string {
   if (!host) {
     throw new ConfigError('No Sealos Cloud host configured. Run "sealos login <host>" first.')
   }
-  return host
+  return host.replace(/\/+$/, '')
+}
+
+export function resolveDbproviderHost (host: string): string {
+  return resolvePrefixedHost(host, 'dbprovider')
+}
+
+export function resolveTemplateProviderHost (host: string): string {
+  return resolvePrefixedHost(host, 'template')
+}
+
+function resolvePrefixedHost (host: string, prefix: string): string {
+  const url = new URL(host)
+
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname.startsWith(`${prefix}.`)
+  ) {
+    return url.toString().replace(/\/+$/, '')
+  }
+
+  url.hostname = `${prefix}.${url.hostname}`
+  return url.toString().replace(/\/+$/, '')
 }
 
 function resolveDatabaseHost (options?: { baseUrl?: string }): string {
@@ -19,23 +42,15 @@ function resolveDatabaseHost (options?: { baseUrl?: string }): string {
     return override.replace(/\/+$/, '')
   }
 
-  const host = resolveHost(options)
-  const url = new URL(host)
+  return resolveDbproviderHost(resolveHost(options))
+}
 
-  if (
-    url.hostname === 'localhost' ||
-    url.hostname === '127.0.0.1' ||
-    url.hostname.startsWith('dbprovider.')
-  ) {
-    return url.toString().replace(/\/+$/, '')
-  }
-
-  url.hostname = `dbprovider.${url.hostname}`
-  return url.toString().replace(/\/+$/, '')
+function resolveTemplateHost (options?: { baseUrl?: string }): string {
+  return resolveTemplateProviderHost(resolveHost(options))
 }
 
 export function createTemplateClient (options?: { baseUrl?: string }) {
-  return createClient<TemplatePaths>({ baseUrl: `${resolveHost(options)}/api/v2alpha` })
+  return createClient<TemplatePaths>({ baseUrl: `${resolveTemplateHost(options)}/api/v2alpha` })
 }
 
 export function createDatabaseClient (options?: { baseUrl?: string }) {
