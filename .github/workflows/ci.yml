@@ -25,13 +25,14 @@ jobs:
         run: npm run test
       - name: coverage
         uses: codecov/codecov-action@v4
-        if: github.actor != 'dependabot[bot]'
+        if: github.actor != 'dependabot[bot]' && env.CODECOV_TOKEN != ''
         with:
           fail_ci_if_error: true
           verbose: false
           token: ${{ secrets.CODECOV_TOKEN }}
         env:
           CI: true
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   release-preview:
     runs-on: ubuntu-latest

@@ -1,10 +1,12 @@
 {
   "name": "sealos-cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and object storage",
   "types": "dist/main.d.ts",
   "type": "module",
-  "bin": "./dist/bin/cli.cjs",
+  "bin": {
+    "sealos-cli": "dist/bin/cli.cjs"
+  },
   "exports": {
     ".": {
       "import": {
@@ -73,7 +75,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zjy365/sealos-cli.git.git"
+    "url": "git+https://github.com/zjy365/sealos-cli.git"
   },
   "dependencies": {
     "axios": "^1.15.0",
