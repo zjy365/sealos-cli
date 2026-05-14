@@ -5,12 +5,21 @@ tool to manage semantic versioning and release notes.
 
 ## Pre-requisites
 
+Create an npm automation token and add it as a repository secret:
+
+```text
+NPM_TOKEN=<npm automation token>
+```
+
 Permit GitHub Actions to create and approve pull requests:
 
 1. Go to Actions -> General in the repository settings: (`https://github.com/<user>/<repo>/settings/actions`)
 2. In `Workflow permissions` enable the toggle for
 `Allow GitHub Actions to create and approve pull requests` (it is not required
 to also toggle the `Read and write permission` option)
+
+The release workflow also needs the default workflow token permission set to
+read and write so the Changesets action can create release pull requests.
 
 ## How to release a new version of the package
 
