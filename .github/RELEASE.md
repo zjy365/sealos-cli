@@ -5,11 +5,20 @@ tool to manage semantic versioning and release notes.
 
 ## Pre-requisites
 
-Create an npm automation token and add it as a repository secret:
+This project publishes with npm Trusted Publishing. Do not add a long-lived npm
+token to GitHub Actions unless Trusted Publishing is unavailable.
+
+In npm, configure a trusted publisher for this package:
 
 ```text
-NPM_TOKEN=<npm automation token>
+Publisher: GitHub Actions
+Repository: zjy365/sealos-cli
+Workflow file: release.yml
+Environment: leave empty
 ```
+
+The release workflow has `id-token: write`, which allows GitHub Actions to
+request short-lived OIDC credentials from npm during publishing.
 
 Permit GitHub Actions to create and approve pull requests:
 

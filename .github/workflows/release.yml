@@ -28,15 +28,6 @@ jobs:
         run: npm ci
       - name: build project
         run: npm run build
-      - name: verify npm token
-        run: |
-          if [ -z "${NPM_TOKEN}" ]; then
-            echo "NPM_TOKEN repository secret is required for the first npm publish."
-            echo "Create an npm automation token, add it to GitHub Actions secrets, then rerun this workflow."
-            exit 1
-          fi
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1
         with:
@@ -46,4 +37,3 @@ jobs:
           title: "chore: new release candidate"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
