@@ -27,18 +27,17 @@ Each module exports factory functions that create Commander.js command instances
 
 ### 2. Shared Libraries (`src/lib/`)
 
-#### `config.ts` - Configuration Management
+#### `auth.ts` - Authentication
 
-- Reads/writes `~/.sealos/config.json`
-- Manages contexts (host, token, workspace)
-- Helper functions for context switching
+- Reads/writes `~/.sealos/auth.json`
+- Stores the active workspace kubeconfig at `~/.sealos/kubeconfig`
+- Builds provider API auth headers as URL-encoded kubeconfig content
 
-#### `api.ts` - HTTP Client
+#### `api-client.ts` - OpenAPI Clients
 
-- Axios-based client with interceptors
-- Automatic authentication via Bearer token
-- KUBECONFIG environment variable support
-- Unified error handling (401 → AuthError)
+- Creates type-safe clients from generated OpenAPI types
+- Resolves template provider hosts with the `template.` prefix
+- Resolves database provider hosts with the `dbprovider.` prefix
 
 #### `output.ts` - Output Formatting
 
@@ -88,11 +87,11 @@ Command Module (commands/*/index.ts)
     ↓
 ┌─────────────┬──────────────┬────────────┐
 │             │              │            │
-Config      API Client   Output       Error
-(lib/config) (lib/api)   (lib/output) (lib/errors)
+Auth       API Client   Output       Error
+(lib/auth) (lib/api-client) (lib/output) (lib/errors)
     ↓           ↓            ↓            ↓
-Configuration  HTTP Req     Terminal    Error Handler
-File          to Sealos     Display     & Exit
+Auth files     HTTP Req     Terminal    Error Handler
+in ~/.sealos   to Sealos     Display     & Exit
 ```
 
 ## Key Design Patterns
@@ -109,13 +108,13 @@ export function createDevboxCommand(): Command {
 }
 ```
 
-### 2. Centralized Configuration
+### 2. Centralized Authentication
 
-All config operations go through `lib/config.ts`:
+All Sealos auth operations go through `lib/auth.ts`:
 
 ```typescript
-const context = getCurrentContext()
-upsertContext(newContext)
+const headers = requireAuth()
+const info = getAuthInfo()
 ```
 
 ### 3. Interceptor Pattern
@@ -141,26 +140,30 @@ All command actions wrapped in try/catch:
 
 ## Environment Variables
 
-- `KUBECONFIG` - Automatically added to API requests via `X-Kubeconfig` header
+- `SEALOS_REGION` - Default Sealos region URL
+- `SEALOS_DATABASE_HOST` - Override database provider host
 - `DEBUG` - Shows full stack traces on errors
 
 ## Configuration File
 
-Location: `~/.sealos/config.json`
+Location: `~/.sealos/auth.json`
 
 ```json
 {
-  "currentContext": "default",
-  "contexts": [
-    {
-      "name": "default",
-      "host": "https://hzh.sealos.run",
-      "token": "xxx",
-      "workspace": "default"
-    }
-  ]
+  "region": "https://usw-1.sealos.io",
+  "access_token": "...",
+  "regional_token": "...",
+  "authenticated_at": "2026-05-14T00:00:00.000Z",
+  "auth_method": "oauth2_device_grant",
+  "current_workspace": {
+    "uid": "...",
+    "id": "default",
+    "teamName": "Default"
+  }
 }
 ```
+
+The active kubeconfig is stored separately at `~/.sealos/kubeconfig`.
 
 ## Adding New Commands
 
@@ -183,7 +186,7 @@ export function createExampleCommand(): Command {
     .description('Example command')
     .action(async () => {
       try {
-        const api = createApiClient()
+  const client = createTemplateClient()
         // implementation
       } catch (error) {
         handleError(error)
@@ -212,9 +215,9 @@ export function createExampleCommand(): Command {
 
 ---
 
-## New: Type-Safe OpenAPI Client + OAuth2 Login
+## Type-Safe OpenAPI Client + OAuth2 Login
 
-> This section describes the newly introduced architecture, independent from the above. The template command has been migrated to this approach. All new commands should use it.
+Template and database commands use this path.
 
 ### Flow
 
@@ -229,67 +232,67 @@ Generated Types (src/generated/*.ts)
        ▼
 Typed Client Factory (src/lib/api-client.ts)
        │
-       │  createTemplateClient()
+       │  createTemplateClient() / createDatabaseClient()
        ▼
 Command handler wrapped with withAuth / withErrorHandling
        │
        ▼
-src/commands/template/index.ts (all subcommands)
+src/commands/template/index.ts / src/commands/database/index.ts
 ```
 
 ### Build
 
 ```json
 {
-  "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts",
+  "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts && openapi-typescript src/docs/database_openapi.json -o src/generated/database.ts",
   "build": "npm run generate:api && tsc && tsup"
 }
 ```
 
 ### Authentication: OAuth2 Device Grant Flow (RFC 8628)
 
-`sealos login <host>` without `-t` triggers the device authorization flow. With `-t` the kubeconfig is saved directly.
+`sealos login [region]` triggers the device authorization flow.
 
 ```text
-sealos login <host>
+sealos login [region]
        │
        ▼
-oauth.ts: requestDeviceAuthorization(region)
+auth.ts: requestDeviceAuthorization(region)
   POST /api/auth/oauth2/device → { device_code, user_code, verification_uri }
        │
        ▼
 User opens browser to authorize
        │
        ▼
-oauth.ts: pollForToken(region, deviceCode, interval, expiresIn)
+auth.ts: pollForToken(region, deviceCode, interval, expiresIn)
   POST /api/auth/oauth2/token → poll until { access_token }
   Handles: authorization_pending, slow_down (+5s), access_denied, expired_token
   Hard cap: 10 minutes
        │
        ▼
-oauth.ts: exchangeForKubeconfig(region, accessToken)
-  POST /api/auth/getDefaultKubeconfig → { data: { kubeconfig } }
+auth.ts: getRegionToken(region, accessToken)
+  POST /api/auth/regionToken → { data: { token, kubeconfig } }
        │
        ▼
-config.ts: upsertContext({ name, host, token: kubeconfig, workspace })
-  → ~/.sealos/config.json
+auth.ts: saveAuth(...) + saveKubeconfig(...)
+  → ~/.sealos/auth.json + ~/.sealos/kubeconfig
 ```
 
 ### API Authentication Chain
 
-After login, the kubeconfig is stored as `context.token`. API calls obtain it via `auth.ts`:
+Provider APIs documented in `src/docs/*_openapi.json` expect URL-encoded kubeconfig content in the `Authorization` header:
 
 ```text
-auth.ts: getToken() → getCurrentContext().token
+auth.ts: getKubeconfigContent() → ~/.sealos/kubeconfig
        │
        ▼
-auth.ts: getAuthHeaders() → { Authorization: encodeURIComponent(token) }
+auth.ts: getAuthHeaders() → { Authorization: encodeURIComponent(kubeconfig) }
        │
        ▼
 API request headers
 ```
 
-`api-client.ts` validates that a host is configured when creating a client. Throws `ConfigError` if not.
+Auth-management calls such as workspace list/switch use the regional token internally.
 
 ### Command Handler HOF
 
@@ -322,15 +325,16 @@ Unified API error format: `{ error: { type, code, message, details? } }`
 
 | File | Role |
 |------|------|
-| `src/lib/constants.ts` | OAuth2 `CLIENT_ID` |
-| `src/lib/oauth.ts` | Device grant flow: request → poll → exchange → browser open |
-| `src/commands/auth/login.ts` | Login command: `-t` direct token or device grant |
-| `src/docs/template_openapi.json` | OpenAPI 3.1.0 spec |
-| `src/generated/template.ts` | Auto-generated types (do not edit manually) |
-| `src/lib/auth.ts` | getToken / getAuthHeaders / requireAuth |
+| `src/commands/auth/login.ts` | Device grant login command |
+| `src/docs/template_openapi.json` | Template OpenAPI 3.1.0 spec |
+| `src/docs/database_openapi.json` | Database OpenAPI 3.1.0 spec |
+| `src/generated/template.ts` | Auto-generated template types |
+| `src/generated/database.ts` | Auto-generated database types |
+| `src/lib/auth.ts` | Device grant flow, auth state, kubeconfig auth headers |
 | `src/lib/with-auth.ts` | withAuth / withErrorHandling HOF |
 | `src/lib/api-client.ts` | Client factory + host validation |
 | `src/commands/template/index.ts` | Template commands |
+| `src/commands/database/index.ts` | Database commands |
 
 ### Adding a New API
 
