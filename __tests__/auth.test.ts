@@ -7,7 +7,10 @@ import {
   checkAuth,
   clearAuth,
   getAuthInfo,
+  getAuthHeaders,
   getAuthPaths,
+  getKubeconfigContent,
+  getRegionalToken,
   listWorkspaces,
   loginWithDeviceFlow,
   pollForToken,
@@ -193,6 +196,22 @@ describe('auth service', () => {
       auth_method: 'oauth2_device_grant',
       authenticated_at: '2026-05-13T00:00:00.000Z',
       current_workspace: { uid: 'private-1', id: 'private', teamName: 'Private' }
+    })
+  })
+
+  test('provider auth headers use URL-encoded kubeconfig content', () => {
+    const deps = makeDeps()
+    saveAuth({
+      region: 'https://usw-1.sealos.io',
+      regional_token: 'regional-token',
+      current_workspace: { uid: 'private-1', id: 'private', teamName: 'Private' }
+    }, deps)
+    saveKubeconfig(kubeconfig, deps)
+
+    expect(getRegionalToken(deps)).toBe('regional-token')
+    expect(getKubeconfigContent(deps)).toBe(kubeconfig)
+    expect(getAuthHeaders(deps)).toEqual({
+      Authorization: encodeURIComponent(kubeconfig)
     })
   })
 

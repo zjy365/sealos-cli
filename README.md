@@ -31,8 +31,8 @@ src/
 │   └── config/               # CLI configuration
 │       └── index.ts
 ├── lib/                       # Shared libraries
-│   ├── api.ts                # API client
-│   ├── config.ts             # Configuration management
+│   ├── api-client.ts         # OpenAPI client factories
+│   ├── auth.ts               # Sealos auth and kubeconfig headers
 │   ├── errors.ts             # Error handling
 │   └── output.ts             # Output formatting
 ├── types/                     # TypeScript type definitions
@@ -42,18 +42,17 @@ src/
 
 ## Architecture
 
-### Configuration Management (`lib/config.ts`)
+### Authentication (`lib/auth.ts`)
 
-- Manages CLI configuration at `~/.sealos/config.json`
-- Handles multiple contexts (hosts/workspaces)
-- Supports environment variables (e.g., `KUBECONFIG`)
+- Manages Sealos auth state at `~/.sealos/auth.json`
+- Stores current workspace kubeconfig at `~/.sealos/kubeconfig`
+- Builds provider API headers with URL-encoded kubeconfig content
 
-### API Client (`lib/api.ts`)
+### OpenAPI Clients (`lib/api-client.ts`)
 
-- Axios-based HTTP client with interceptors
-- Automatic token injection from current context
-- Unified error handling
-- Support for KUBECONFIG environment variable
+- Type-safe clients generated from `src/docs/*_openapi.json`
+- Routes template calls to `template.<region>/api/v2alpha`
+- Routes database calls to `dbprovider.<region>/api/v2alpha`
 
 ### Output Formatting (`lib/output.ts`)
 
@@ -104,14 +103,16 @@ npm test
 ### Authentication
 
 ```bash
-# Login in browser and exchange for kubeconfig automatically
-sealos login hzh.sealos.run
-
-# Login with kubeconfig content
-sealos login hzh.sealos.run --token "$(cat ~/.kube/config)"
+# Login in browser and exchange for regional token + kubeconfig automatically
+sealos login https://usw-1.sealos.io
 
 # Check current user
 sealos whoami
+
+# Inspect auth and switch workspace
+sealos auth info
+sealos auth list
+sealos auth switch <workspace-id-or-team-name>
 
 # Logout
 sealos logout
@@ -183,6 +184,19 @@ sealos database connection my-db
 # More commands
 sealos database --help
 sealos database <subcommand> --help
+
+# Operational commands backed by src/docs/database_openapi.json
+sealos database update my-db --cpu 2 --memory 4
+sealos database start my-db
+sealos database pause my-db
+sealos database restart my-db
+sealos database backup my-db --name manual-backup
+sealos database backups my-db
+sealos database restore my-db --from manual-backup --name restored-db
+sealos database enable-public my-db
+sealos database disable-public my-db
+sealos database log-files <pod-name> --db-type postgresql --log-type runtimeLog
+sealos database logs <pod-name> --db-type postgresql --log-type runtimeLog --log-path /path/to/log
 ```
 
 Implementation: `src/commands/database/index.ts`
@@ -202,20 +216,19 @@ sealos config set key value
 
 ## Environment Variables
 
-- `KUBECONFIG`: Path to Kubernetes config file (automatically included in API requests)
+- `SEALOS_REGION`: Default Sealos region URL for auth and public provider endpoints
+- `SEALOS_DATABASE_HOST`: Override database provider host for database commands
 - `DEBUG`: Enable debug mode for verbose error output
 
 ## TODO
 
 Most command implementations contain TODO comments indicating where API integration is needed. Key areas:
 
-1. **Authentication**: OAuth flow for browser-based login
-2. **API Integration**: Connect all commands to actual Sealos API endpoints
-3. **S3 Operations**: File upload/download with progress tracking
-4. **Devbox Management**: Connect devbox commands to actual Sealos API endpoints
-5. **Interactive Prompts**: Use inquirer for confirmations
-6. **YAML Support**: Add YAML output formatting
-7. **Config Nesting**: Support nested config key access
+1. **S3 Operations**: File upload/download with progress tracking
+2. **Devbox Management**: Connect devbox commands to actual Sealos API endpoints
+3. **Interactive Prompts**: Use inquirer for confirmations
+4. **YAML Support**: Add YAML output formatting
+5. **Config Nesting**: Support nested config key access
 
 ## Best Practices Implemented
 

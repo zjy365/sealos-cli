@@ -37,11 +37,11 @@ type DatabaseType = typeof SUPPORTED_DATABASE_TYPES[number]
 type LogDbType = typeof SUPPORTED_LOG_DB_TYPES[number]
 type LogType = typeof SUPPORTED_LOG_TYPES[number]
 
-function collectOption (value: string, previous: string[]): string[] {
+export function collectOption (value: string, previous: string[]): string[] {
   return [...previous, value]
 }
 
-function parseKeyValueArgs (pairs: string[]): Record<string, string> {
+export function parseKeyValueArgs (pairs: string[]): Record<string, string> {
   const values: Record<string, string> = {}
   for (const pair of pairs) {
     const index = pair.indexOf('=')
@@ -53,7 +53,7 @@ function parseKeyValueArgs (pairs: string[]): Record<string, string> {
   return values
 }
 
-function normalizeDatabaseType (type: string): DatabaseType {
+export function normalizeDatabaseType (type: string): DatabaseType {
   const normalized = type.trim().toLowerCase()
   const aliases: Record<string, DatabaseType> = {
     postgres: 'postgresql',
@@ -70,7 +70,7 @@ function normalizeDatabaseType (type: string): DatabaseType {
   return resolved
 }
 
-function normalizeLogDbType (type: string): LogDbType {
+export function normalizeLogDbType (type: string): LogDbType {
   const normalized = normalizeDatabaseType(type)
   if (!SUPPORTED_LOG_DB_TYPES.includes(normalized as LogDbType)) {
     throw new Error(`Logs API only supports db types: ${SUPPORTED_LOG_DB_TYPES.join(', ')}`)
@@ -79,7 +79,7 @@ function normalizeLogDbType (type: string): LogDbType {
   return normalized as LogDbType
 }
 
-function normalizeLogType (type: string): LogType {
+export function normalizeLogType (type: string): LogType {
   const normalized = type.trim() as LogType
   if (!SUPPORTED_LOG_TYPES.includes(normalized)) {
     throw new Error(`Unsupported log type "${type}". Use one of: ${SUPPORTED_LOG_TYPES.join(', ')}`)
@@ -88,7 +88,7 @@ function normalizeLogType (type: string): LogType {
   return normalized
 }
 
-function parseNumericValue (value: string, field: string): number {
+export function parseNumericValue (value: string, field: string): number {
   const normalized = value.trim().toLowerCase()
   let raw = normalized
 
@@ -108,7 +108,7 @@ function parseNumericValue (value: string, field: string): number {
   return parsed
 }
 
-function parseIntegerValue (value: string, field: string): number {
+export function parseIntegerValue (value: string, field: string): number {
   const parsed = parseNumericValue(value, field)
   if (!Number.isInteger(parsed)) {
     throw new Error(`${field} must be an integer`)
@@ -116,7 +116,7 @@ function parseIntegerValue (value: string, field: string): number {
   return parsed
 }
 
-function buildQuota (options: { cpu?: string; memory?: string; storage?: string; replicas?: string }): Record<string, number> {
+export function buildQuota (options: { cpu?: string; memory?: string; storage?: string; replicas?: string }): Record<string, number> {
   const quota: Record<string, number> = {}
 
   if (options.cpu !== undefined) quota.cpu = parseNumericValue(options.cpu, 'cpu')
@@ -127,7 +127,7 @@ function buildQuota (options: { cpu?: string; memory?: string; storage?: string;
   return quota
 }
 
-function buildAutoBackup (options: {
+export function buildAutoBackup (options: {
   backupStart?: boolean
   backupType?: string
   backupWeek: string[]
@@ -154,12 +154,12 @@ function formatValue (value: unknown): string {
   return String(value)
 }
 
-function summarizeVersions (versions: string[]): string {
+export function summarizeVersions (versions: string[]): string {
   if (versions.length <= 3) return versions.join(', ')
   return `${versions.slice(0, 3).join(', ')} ... (${versions.length} total)`
 }
 
-function extractVersionsMap (payload: any): Record<string, string[]> {
+export function extractVersionsMap (payload: any): Record<string, string[]> {
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
     if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
       return payload.data as Record<string, string[]>

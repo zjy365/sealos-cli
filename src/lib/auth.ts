@@ -147,7 +147,7 @@ export function loadAuth (deps: AuthDependencies = {}): SealosAuthData {
   return JSON.parse(readFileSync(paths.authPath, 'utf-8')) as SealosAuthData
 }
 
-export function getToken (deps: AuthDependencies = {}): string | null {
+export function getRegionalToken (deps: AuthDependencies = {}): string | null {
   try {
     return loadAuth(deps).regional_token || null
   } catch {
@@ -155,9 +155,18 @@ export function getToken (deps: AuthDependencies = {}): string | null {
   }
 }
 
+export function getKubeconfigContent (deps: AuthDependencies = {}): string | null {
+  const { paths } = withDeps(deps)
+  try {
+    return readFileSync(paths.kubeconfigPath, 'utf-8')
+  } catch {
+    return null
+  }
+}
+
 export function getAuthHeaders (deps: AuthDependencies = {}): { Authorization: string } | null {
-  const token = getToken(deps)
-  return token ? { Authorization: token } : null
+  const kubeconfig = getKubeconfigContent(deps)
+  return kubeconfig ? { Authorization: encodeURIComponent(kubeconfig) } : null
 }
 
 export function requireAuth (deps: AuthDependencies = {}): { Authorization: string } {
