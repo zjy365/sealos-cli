@@ -39,8 +39,8 @@
     "lint:markdown": "npx -y markdownlint-cli@0.45.0 -c .github/.markdownlint.yml -i '.git' -i '__tests__' -i '.github' -i '.changeset' -i 'CODE_OF_CONDUCT.md' -i 'CHANGELOG.md' -i 'docs/**' -i 'node_modules' -i 'dist' '**/**.md' --fix",
     "lint:fix": "eslint . --fix",
     "lint:lockfile": "lockfile-lint --path package-lock.json --validate-https --allowed-hosts npm yarn",
-    "test": "c8 node --import tsx --test __tests__/**/*.test.ts",
-    "test:watch": "c8 node --import tsx --test --watch __tests__/**/*.test.ts",
+    "test": "c8 tsx --test __tests__/*.test.ts",
+    "test:watch": "c8 tsx --test --watch __tests__/*.test.ts",
     "coverage:view": "open coverage/lcov-report/index.html",
     "version": "changeset version",
     "release": "changeset publish"
