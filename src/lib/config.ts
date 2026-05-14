@@ -108,7 +108,7 @@ export function removeContext (name: string): void {
 
   // If removing current context, clear currentContext
   if (config.currentContext === name) {
-    config.currentContext = config.contexts.length > 0 ? config.contexts[0]!.name : ''
+    config.currentContext = config.contexts[0]?.name || ''
   }
 
   writeConfig(config)
@@ -120,7 +120,7 @@ export function removeContext (name: string): void {
 export function getConfigValue (key: string): string | undefined {
   const config = readConfig()
   // TODO: Implement nested key access, e.g. "contexts.0.name"
-  return (config as any)[key]
+  return (config as unknown as Record<string, unknown>)[key] as string | undefined
 }
 
 /**
@@ -129,6 +129,6 @@ export function getConfigValue (key: string): string | undefined {
 export function setConfigValue (key: string, value: string): void {
   const config = readConfig()
   // TODO: Implement nested key setting
-  ;(config as any)[key] = value
+  ;(config as unknown as Record<string, unknown>)[key] = value
   writeConfig(config)
 }

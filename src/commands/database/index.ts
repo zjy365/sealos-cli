@@ -1,7 +1,6 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
 import { createDatabaseClient } from '../../lib/api-client.ts'
-import { getCurrentContext } from '../../lib/config.ts'
 import { type ApiErrorBody, mapApiError } from '../../lib/errors.ts'
 import { outputJson, outputTable } from '../../lib/output.ts'
 import { withAuth, withErrorHandling } from '../../lib/with-auth.ts'
@@ -324,10 +323,6 @@ export function createDatabaseCommand (): Command {
     .option('--host <host>', 'Sealos region host for public version lookup, e.g. https://gzg.sealos.run')
     .option('--type <type>', 'Filter versions by database type')
     .action(withErrorHandling({ spinnerText: 'Loading versions...' }, async (ctx, options: { output: string; host?: string; type?: string }) => {
-      if (!options.host && !getCurrentContext()?.host) {
-        throw new Error('No Sealos Cloud host configured. Run "sealos login <host>" first, or pass --host to query versions without logging in.')
-      }
-
       const client = createDatabaseClient({ baseUrl: options.host })
       const { data, error, response } = await client.GET('/databases/versions')
 

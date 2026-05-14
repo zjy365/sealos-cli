@@ -1,12 +1,18 @@
 import createClient from 'openapi-fetch'
 import type { paths as TemplatePaths } from '../generated/template.ts'
 import type { paths as DatabasePaths } from '../generated/database.ts'
-import { getCurrentContext } from './config.ts'
+import { DEFAULT_SEALOS_REGION, loadAuth } from './auth.ts'
 import { ConfigError } from './errors.ts'
 
 function resolveHost (options?: { baseUrl?: string }): string {
-  const context = getCurrentContext()
-  const host = options?.baseUrl || context?.host
+  let authRegion: string | undefined
+  try {
+    authRegion = loadAuth().region
+  } catch {
+    authRegion = undefined
+  }
+
+  const host = options?.baseUrl || process.env.SEALOS_REGION || authRegion || DEFAULT_SEALOS_REGION
   if (!host) {
     throw new ConfigError('No Sealos Cloud host configured. Run "sealos login <host>" first.')
   }
