@@ -1,6 +1,6 @@
 {
   "name": "sealos-cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and object storage",
   "types": "dist/main.d.ts",
   "type": "module",
