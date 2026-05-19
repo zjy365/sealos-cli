@@ -16,6 +16,29 @@ interface TemplateDeployOptions {
 
 export type TemplateDeployMode = 'catalog' | 'raw'
 
+interface TemplateInstanceResource {
+  name: string
+  uid?: string
+  resourceType: string
+  quota?: {
+    cpu?: number
+    memory?: number
+    storage?: number
+    replicas?: number
+  }
+}
+
+interface TemplateInstanceResult {
+  name: string
+  uid?: string
+  displayName?: string
+  createdAt?: string
+  resourceType?: string
+  dryRun?: boolean
+  args?: Record<string, string>
+  resources?: TemplateInstanceResource[]
+}
+
 export function parseSetArgs (sets: string[]): Record<string, string> {
   const args: Record<string, string> = {}
   for (const s of sets) {
@@ -110,6 +133,56 @@ export function buildRawTemplateDeployBody (
   return body
 }
 
+function formatValue (value: unknown): string {
+  if (value === undefined || value === null || value === '') return '-'
+  return String(value)
+}
+
+function printInstanceResult (instance: TemplateInstanceResult, options: { template?: string; raw?: boolean; dryRun?: boolean } = {}): void {
+  if (options.dryRun) {
+    console.log(chalk.dim(`  Name: ${instance.name}`))
+  } else {
+    console.log(chalk.dim(`  Name:    ${instance.name}`))
+    if (instance.displayName) {
+      console.log(chalk.dim(`  Display: ${instance.displayName}`))
+    }
+    if (instance.uid) {
+      console.log(chalk.dim(`  UID:     ${instance.uid}`))
+    }
+    if (instance.createdAt) {
+      console.log(chalk.dim(`  Created: ${instance.createdAt}`))
+    }
+    if (options.template) {
+      console.log(chalk.dim(`  Template:${options.template}`))
+    }
+  }
+
+  const argEntries = Object.entries(instance.args ?? {})
+  if (argEntries.length > 0) {
+    console.log(chalk.dim('\n  Arguments:'))
+    outputTable([
+      [chalk.bold('Name'), chalk.bold('Value')],
+      ...argEntries.map(([key, value]) => [key, value])
+    ])
+  }
+
+  if (instance.resources && instance.resources.length > 0) {
+    console.log(chalk.dim(options.dryRun ? '\n  Resources that would be created:' : '\n  Resources:'))
+    outputTable([
+      [chalk.bold('Name'), chalk.bold('Type'), chalk.bold('UID'), chalk.bold('CPU'), chalk.bold('Memory'), chalk.bold('Storage'), chalk.bold('Replicas')],
+      ...instance.resources.map(resource => [
+        formatValue(resource.name),
+        formatValue(resource.resourceType),
+        formatValue(resource.uid),
+        resource.quota?.cpu != null ? `${resource.quota.cpu} vCPU` : '-',
+        resource.quota?.memory != null ? `${resource.quota.memory} GiB` : '-',
+        resource.quota?.storage != null ? `${resource.quota.storage} GiB` : '-',
+        formatValue(resource.quota?.replicas)
+      ])
+    ])
+  }
+}
+
 export function createTemplateCommand (): Command {
   const tplCmd = new Command('template')
     .alias('tpl')
@@ -135,26 +208,8 @@ export function createTemplateCommand (): Command {
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
-      ctx.spinner.succeed(`Instance "${data.name}" created successfully from catalog template "${catalogTemplate}"`)
-      console.log(chalk.dim(`  UID:     ${data.uid}`))
-      console.log(chalk.dim(`  Created: ${data.createdAt}`))
-
-      if (data.resources && data.resources.length > 0) {
-        console.log(chalk.dim('\n  Resources:'))
-        const rows: string[][] = [
-          [chalk.bold('Name'), chalk.bold('Type'), chalk.bold('CPU'), chalk.bold('Memory'), chalk.bold('Storage')]
-        ]
-        for (const r of data.resources) {
-          rows.push([
-            r.name,
-            r.resourceType,
-            r.quota?.cpu != null ? `${r.quota.cpu} vCPU` : '-',
-            r.quota?.memory != null ? `${r.quota.memory} GiB` : '-',
-            r.quota?.storage != null ? `${r.quota.storage} GiB` : '-'
-          ])
-        }
-        outputTable(rows)
-      }
+      ctx.spinner.succeed(`Instance "${data.name}" created successfully`)
+      printInstanceResult(data, { template: catalogTemplate })
       return
     }
 
@@ -171,23 +226,12 @@ export function createTemplateCommand (): Command {
 
     if (deployOptions.dryRun) {
       ctx.spinner.succeed('Raw template validation passed; no resources were created')
-      console.log(chalk.dim(`  Name: ${data.name}`))
-      if (data.resources && data.resources.length > 0) {
-        console.log(chalk.dim('\n  Resources that would be created:'))
-        for (const r of data.resources) {
-          console.log(chalk.dim(`    - ${r.resourceType}: ${r.name}`))
-        }
-      }
+      printInstanceResult(data, { raw: true, dryRun: true })
       return
     }
 
     ctx.spinner.succeed(`Raw template deployed as "${data.name}"`)
-    if ('uid' in data) {
-      console.log(chalk.dim(`  UID:     ${data.uid}`))
-    }
-    if ('createdAt' in data) {
-      console.log(chalk.dim(`  Created: ${data.createdAt}`))
-    }
+    printInstanceResult(data, { raw: true })
   })
 
   // ── list ─────────────────────────────────────────────────────────
@@ -195,11 +239,12 @@ export function createTemplateCommand (): Command {
     .command('list')
     .description('List available templates')
     .option('-c, --category <category>', 'Filter by category')
+    .option('-l, --language <language>', 'Language code (for example: en, zh)')
     .option('-o, --output <format>', 'Output format (json|table)', 'table')
-    .action(withErrorHandling({ spinnerText: 'Loading templates...' }, async (ctx, options: { category?: string; output: string }) => {
+    .action(withErrorHandling({ spinnerText: 'Loading templates...' }, async (ctx, options: { category?: string; language?: string; output: string }) => {
       const client = createTemplateClient()
       const { data, error, response } = await client.GET('/templates', {
-        params: { query: {} }
+        params: { query: options.language ? { language: options.language } : {} }
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
@@ -235,12 +280,14 @@ export function createTemplateCommand (): Command {
     .command('get <name>')
     .alias('describe')
     .description('Get template details')
+    .option('-l, --language <language>', 'Language code (for example: en, zh)')
     .option('-o, --output <format>', 'Output format (json|table)', 'table')
-    .action(withErrorHandling({ spinnerText: 'Loading template...' }, async (ctx, name: string, options: { output: string }) => {
+    .action(withErrorHandling({ spinnerText: 'Loading template...' }, async (ctx, name: string, options: { language?: string; output: string }) => {
       const client = createTemplateClient()
       const { data, error, response } = await client.GET('/templates/{name}', {
         params: {
-          path: { name }
+          path: { name },
+          query: options.language ? { language: options.language } : {}
         }
       })
 
@@ -284,6 +331,25 @@ export function createTemplateCommand (): Command {
         }
         outputTable(argRows)
       }
+    }))
+
+  // -- delete --------------------------------------------------------
+  tplCmd
+    .command('delete <instance>')
+    .alias('rm')
+    .description('Delete a deployed template instance')
+    .action(withAuth({ spinnerText: 'Deleting template instance...' }, async (ctx, instance: string) => {
+      const client = createTemplateClient()
+      const { error, response } = await client.DELETE('/templates/instances/{instanceName}', {
+        headers: ctx.auth,
+        params: {
+          path: { instanceName: instance }
+        }
+      })
+
+      if (error) throw mapApiError(response.status, error as ApiErrorBody)
+
+      ctx.spinner.succeed(`Instance "${instance}" deleted`)
     }))
 
   // ── deploy ──────────────────────────────────────────────────────

@@ -1,17 +1,5 @@
 // Core type definitions
 
-export interface SealosConfig {
-  currentContext: string
-  contexts: Context[]
-}
-
-export interface Context {
-  name: string
-  host: string
-  token: string
-  workspace: string
-}
-
 export interface DevboxConfig {
   name?: string
   template: string

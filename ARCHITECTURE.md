@@ -20,7 +20,6 @@ commands/
   template/       - template operations
   quota/          - resource quotas
   app/            - application management
-  config/         - CLI configuration
 ```
 
 Each module exports factory functions that create Commander.js command instances.
@@ -38,6 +37,7 @@ Each module exports factory functions that create Commander.js command instances
 - Creates type-safe clients from generated OpenAPI types
 - Resolves template provider hosts with the `template.` prefix
 - Resolves database provider hosts with the `dbprovider.` prefix
+- Resolves devbox provider hosts with the `devbox.` prefix
 
 #### `output.ts` - Output Formatting
 
@@ -57,7 +57,7 @@ Each module exports factory functions that create Commander.js command instances
 
 ### 3. Type Definitions (`src/types/`)
 
-- TypeScript interfaces for configuration
+- TypeScript interfaces for auth, workspace, command options, and shared responses
 - API request/response types
 - Shared type definitions
 
@@ -117,12 +117,13 @@ const headers = requireAuth()
 const info = getAuthInfo()
 ```
 
-### 3. Interceptor Pattern
+### 3. Authenticated Handler Pattern
 
-API client uses axios interceptors for:
+Authenticated command handlers use `withAuth()` to:
 
-- Adding auth tokens to requests
-- Converting 401 errors to AuthError
+- Require a saved kubeconfig before protected provider calls
+- Pass URL-encoded kubeconfig auth headers into typed OpenAPI clients
+- Convert thrown command errors through the shared error handler
 
 ### 4. Error Wrapping
 
@@ -142,6 +143,7 @@ All command actions wrapped in try/catch:
 
 - `SEALOS_REGION` - Default Sealos region URL
 - `SEALOS_DATABASE_HOST` - Override database provider host
+- `SEALOS_DEVBOX_HOST` - Override devbox provider host
 - `DEBUG` - Shows full stack traces on errors
 
 ## Configuration File
@@ -179,14 +181,14 @@ Example:
 // src/commands/example/index.ts
 import { Command } from 'commander'
 import { handleError } from '../../lib/errors.ts'
-import { createApiClient } from '../../lib/api.ts'
+import { createTemplateClient } from '../../lib/api-client.ts'
 
 export function createExampleCommand(): Command {
   const cmd = new Command('example')
     .description('Example command')
     .action(async () => {
       try {
-  const client = createTemplateClient()
+        const client = createTemplateClient()
         // implementation
       } catch (error) {
         handleError(error)
@@ -209,15 +211,14 @@ export function createExampleCommand(): Command {
 1. Add YAML library for proper YAML output
 2. Implement interactive prompts (inquirer)
 3. Add progress bars for file uploads
-4. Support nested config key access
-5. Add command aliases
-6. Add shell completion scripts
+4. Add command aliases
+5. Add shell completion scripts
 
 ---
 
 ## Type-Safe OpenAPI Client + OAuth2 Login
 
-Template and database commands use this path.
+Template, database, and devbox commands use this path.
 
 ### Flow
 
@@ -232,19 +233,19 @@ Generated Types (src/generated/*.ts)
        ▼
 Typed Client Factory (src/lib/api-client.ts)
        │
-       │  createTemplateClient() / createDatabaseClient()
+       │  createTemplateClient() / createDatabaseClient() / createDevboxClient()
        ▼
 Command handler wrapped with withAuth / withErrorHandling
        │
        ▼
-src/commands/template/index.ts / src/commands/database/index.ts
+src/commands/template/index.ts / src/commands/database/index.ts / src/commands/devbox/index.ts
 ```
 
 ### Build
 
 ```json
 {
-  "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts && openapi-typescript src/docs/database_openapi.json -o src/generated/database.ts",
+  "generate:api": "openapi-typescript src/docs/template_openapi.json -o src/generated/template.ts && openapi-typescript src/docs/database_openapi.json -o src/generated/database.ts && openapi-typescript src/docs/devbox_openapi.json -o src/generated/devbox.ts",
   "build": "npm run generate:api && tsc && tsup"
 }
 ```
@@ -328,13 +329,16 @@ Unified API error format: `{ error: { type, code, message, details? } }`
 | `src/commands/auth/login.ts` | Device grant login command |
 | `src/docs/template_openapi.json` | Template OpenAPI 3.1.0 spec |
 | `src/docs/database_openapi.json` | Database OpenAPI 3.1.0 spec |
+| `src/docs/devbox_openapi.json` | Devbox OpenAPI 3.1.0 spec |
 | `src/generated/template.ts` | Auto-generated template types |
 | `src/generated/database.ts` | Auto-generated database types |
+| `src/generated/devbox.ts` | Auto-generated devbox types |
 | `src/lib/auth.ts` | Device grant flow, auth state, kubeconfig auth headers |
 | `src/lib/with-auth.ts` | withAuth / withErrorHandling HOF |
 | `src/lib/api-client.ts` | Client factory + host validation |
 | `src/commands/template/index.ts` | Template commands |
 | `src/commands/database/index.ts` | Database commands |
+| `src/commands/devbox/index.ts` | Devbox commands |
 
 ### Adding a New API
 

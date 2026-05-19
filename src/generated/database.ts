@@ -3474,11 +3474,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        code: number;
-                        message: string;
-                        data: {
-                            [key: string]: string[];
-                        };
+                        [key: string]: string[];
                     };
                 };
             };

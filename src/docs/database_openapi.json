@@ -6889,46 +6889,29 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "number"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string",
-                        "enum": [
-                          "postgresql",
-                          "mongodb",
-                          "apecloud-mysql",
-                          "mysql",
-                          "redis",
-                          "kafka",
-                          "qdrant",
-                          "nebula",
-                          "weaviate",
-                          "milvus",
-                          "pulsar",
-                          "clickhouse"
-                        ]
-                      },
-                      "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
+                  "propertyNames": {
+                    "type": "string",
+                    "enum": [
+                      "postgresql",
+                      "mongodb",
+                      "apecloud-mysql",
+                      "mysql",
+                      "redis",
+                      "kafka",
+                      "qdrant",
+                      "nebula",
+                      "weaviate",
+                      "milvus",
+                      "pulsar",
+                      "clickhouse"
+                    ]
                   },
-                  "required": [
-                    "code",
-                    "message",
-                    "data"
-                  ],
-                  "additionalProperties": false
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }

@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/templates/instances/{instanceName}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete template instance
+         * @description Deletes a deployed template instance from the user namespace. Instances created with ownerReferences enabled delete their explicit PVCs first and then delete the Instance so Kubernetes garbage collection removes owned dependents. Legacy instances without the ownerReferences-ready marker use the comprehensive label-selector cleanup path before deleting the Instance.
+         */
+        delete: operations["deleteInstance"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -968,6 +988,214 @@ export interface operations {
                              * @enum {string}
                              */
                             code: "KUBERNETES_ERROR" | "OPERATION_FAILED" | "INTERNAL_ERROR";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Raw error string from the underlying system, for troubleshooting. */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Service Unavailable - Kubernetes cluster temporarily unreachable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @constant
+                             */
+                            type: "internal_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @constant
+                             */
+                            code: "SERVICE_UNAVAILABLE";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Raw connection error from the underlying system (e.g. ECONNREFUSED). */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    deleteInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Name of the deployed template instance to delete (must exist in user namespace) */
+                instanceName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Instance deleted successfully. No response body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad request - invalid instance name parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @enum {string}
+                             */
+                            type: "validation_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @enum {string}
+                             */
+                            code: "INVALID_PARAMETER";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description For INVALID_PARAMETER: Array<{ field, message }>. For INVALID_VALUE: optional string. Omitted for other codes. */
+                            details?: {
+                                /** @description Field path using dot/bracket notation, e.g. "ports[0].number" */
+                                field: string;
+                                /** @description Validation error message for this field */
+                                message: string;
+                            }[] | string;
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized - Missing or invalid kubeconfig */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @constant
+                             */
+                            type: "authentication_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @constant
+                             */
+                            code: "AUTHENTICATION_REQUIRED";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Typically omitted. May contain additional context in edge cases. */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Forbidden - Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @constant
+                             */
+                            type: "authorization_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @enum {string}
+                             */
+                            code: "PERMISSION_DENIED";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Typically omitted. May contain additional context in edge cases. */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Not Found - Instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @constant
+                             */
+                            type: "resource_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @constant
+                             */
+                            code: "NOT_FOUND";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Typically omitted. May contain additional context in edge cases. */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @constant
+                             */
+                            type: "client_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @constant
+                             */
+                            code: "METHOD_NOT_ALLOWED";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Typically omitted. */
+                            details?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Internal Server Error - Kubernetes API error or unexpected failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /**
+                             * @description High-level error type for categorization
+                             * @enum {string}
+                             */
+                            type: "operation_error" | "internal_error";
+                            /**
+                             * @description Specific error code for programmatic handling and i18n
+                             * @enum {string}
+                             */
+                            code: "KUBERNETES_ERROR" | "INTERNAL_ERROR";
                             /** @description Human-readable error message */
                             message: string;
                             /** @description Raw error string from the underlying system, for troubleshooting. */

@@ -1,0 +1,66 @@
+import { execFileSync } from 'node:child_process'
+import { describe, expect, test } from 'vitest'
+
+describe('help output', () => {
+  test('top-level help only exposes implemented command modules', () => {
+    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+
+    expect(help).toMatch(/auth/)
+    expect(help).toMatch(/workspace/)
+    expect(help).toMatch(/devbox/)
+    expect(help).toMatch(/database/)
+    expect(help).toMatch(/template/)
+    expect(help).not.toMatch(/\bs3\b/)
+    expect(help).not.toMatch(/\bquota\b/)
+    expect(help).not.toMatch(/\bapp\b/)
+  })
+
+  test('template deploy help documents raw-only dry-run', () => {
+    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'template', 'deploy', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(help).toMatch(/Validate raw template YAML without creating resources/)
+    expect(help).toMatch(/Catalog:/)
+    expect(help).toMatch(/Raw:/)
+  })
+
+  test('login help documents token limited mode', () => {
+    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'login', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(help).toMatch(/Store a regional token without OAuth device login/)
+  })
+
+  test('workspace help documents real workspace commands', () => {
+    const workspaceHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(workspaceHelp).toMatch(/switch/)
+    expect(workspaceHelp).toMatch(/list/)
+    expect(workspaceHelp).toMatch(/current/)
+
+    const listHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'list', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(listHelp).toMatch(/Output format: json, table/)
+
+    const switchHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'switch', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(switchHelp).toMatch(/Workspace id, uid, or team name/)
+
+    const currentHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'current', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(currentHelp).toMatch(/Output format: json, table/)
+  })
+})

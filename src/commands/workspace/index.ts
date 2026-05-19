@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import { getCurrentContext } from '../../lib/config.ts'
-import { success, outputTable, info } from '../../lib/output.ts'
+import { getAuthInfo, listWorkspaces, switchWorkspace } from '../../lib/auth.ts'
+import { success, outputJson, outputTable } from '../../lib/output.ts'
 import { handleError, AuthError } from '../../lib/errors.ts'
 
 export function createWorkspaceCommand (): Command {
@@ -8,73 +8,83 @@ export function createWorkspaceCommand (): Command {
     .alias('ws')
     .description('Manage workspaces')
 
-  // workspace switch
   workspaceCmd
     .command('switch')
     .description('Switch to another workspace')
-    .argument('<name>', 'Workspace name')
-    .action(async (name) => {
+    .argument('<namespace>', 'Workspace id, uid, or team name')
+    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .action(async (namespace, options) => {
       try {
-        // TODO: 调用 API 验证 workspace 是否存在
-        // const api = createApiClient()
-        // await api.get(`/api/v1/workspaces/${name}`)
-
-        // 更新配置
-        const context = getCurrentContext()
-        if (context) {
-          context.workspace = name
-          // TODO: 更新到配置文件
+        const result = await switchWorkspace(namespace)
+        if (options.output === 'json') {
+          outputJson(result)
+          return
         }
 
-        success(`Switched to workspace: ${name}`)
+        success(`Switched to workspace: ${result.workspace.id || result.workspace.uid || namespace}`)
       } catch (error) {
         handleError(error)
       }
     })
 
-  // workspace list
   workspaceCmd
     .command('list')
     .description('List all workspaces')
-    .action(async () => {
+    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .action(async (options) => {
       try {
-        const context = getCurrentContext()
-        if (!context) {
-          throw new AuthError()
+        const result = await listWorkspaces()
+        if (options.output === 'json') {
+          outputJson(result)
+          return
         }
 
-        // 示例数据
-        const data = [
-          ['NAME', 'STATUS', 'CURRENT'],
-          ['default', 'Active', context.workspace === 'default' ? '*' : ''],
-          ['production', 'Active', context.workspace === 'production' ? '*' : '']
-        ]
-
-        outputTable(data)
-        info('API integration needed for real data')
+        outputTable([
+          ['UID', 'ID', 'TEAM', 'ROLE', 'TYPE', 'CURRENT'],
+          ...result.workspaces.map(workspace => [
+            workspace.uid || '',
+            workspace.id || '',
+            workspace.teamName || '',
+            workspace.role || '',
+            workspace.nstype || '',
+            workspace.id === result.current ? '*' : ''
+          ])
+        ])
       } catch (error) {
         handleError(error)
       }
     })
 
-  // workspace current
   workspaceCmd
     .command('current')
     .description('Show current workspace')
-    .action(async () => {
+    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .action(async (options) => {
       try {
-        const context = getCurrentContext()
-        if (!context) {
+        const authInfo = getAuthInfo()
+        if (!authInfo.authenticated) {
           throw new AuthError()
         }
 
-        const data = [
-          ['Field', 'Value'],
-          ['Workspace', context.workspace],
-          ['Context', context.name]
-        ]
+        const workspace = authInfo.current_workspace || null
+        const result = {
+          workspace,
+          region: authInfo.region || 'unknown',
+          kubeconfig_path: authInfo.kubeconfig_path || 'unknown'
+        }
 
-        outputTable(data)
+        if (options.output === 'json') {
+          outputJson(result)
+          return
+        }
+
+        outputTable([
+          ['Field', 'Value'],
+          ['Workspace', workspace?.id || authInfo.workspace || 'unknown'],
+          ['Team', workspace?.teamName || 'unknown'],
+          ['Region', authInfo.region || 'unknown'],
+          ['Kubeconfig', authInfo.kubeconfig_path || 'unknown']
+        ])
       } catch (error) {
         handleError(error)
       }

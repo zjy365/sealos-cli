@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch'
 import type { paths as TemplatePaths } from '../generated/template.ts'
 import type { paths as DatabasePaths } from '../generated/database.ts'
+import type { paths as DevboxPaths } from '../generated/devbox.ts'
 import { DEFAULT_SEALOS_REGION, loadAuth } from './auth.ts'
 import { ConfigError } from './errors.ts'
 
@@ -25,6 +26,10 @@ export function resolveDbproviderHost (host: string): string {
 
 export function resolveTemplateProviderHost (host: string): string {
   return resolvePrefixedHost(host, 'template')
+}
+
+export function resolveDevboxProviderHost (host: string): string {
+  return resolvePrefixedHost(host, 'devbox')
 }
 
 function resolvePrefixedHost (host: string, prefix: string): string {
@@ -55,10 +60,23 @@ function resolveTemplateHost (options?: { baseUrl?: string }): string {
   return resolveTemplateProviderHost(resolveHost(options))
 }
 
+function resolveDevboxHost (options?: { baseUrl?: string }): string {
+  const override = process.env.SEALOS_DEVBOX_HOST?.trim()
+  if (override) {
+    return override.replace(/\/+$/, '')
+  }
+
+  return resolveDevboxProviderHost(resolveHost(options))
+}
+
 export function createTemplateClient (options?: { baseUrl?: string }) {
   return createClient<TemplatePaths>({ baseUrl: `${resolveTemplateHost(options)}/api/v2alpha` })
 }
 
 export function createDatabaseClient (options?: { baseUrl?: string }) {
   return createClient<DatabasePaths>({ baseUrl: `${resolveDatabaseHost(options)}/api/v2alpha` })
+}
+
+export function createDevboxClient (options?: { baseUrl?: string }) {
+  return createClient<DevboxPaths>({ baseUrl: `${resolveDevboxHost(options)}/api/v2alpha` })
 }

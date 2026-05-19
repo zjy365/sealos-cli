@@ -298,4 +298,13 @@ describe('CLI command registration', () => {
     expect(auth).toBeDefined()
     expect(auth?.commands.map(command => command.name())).toEqual(['check', 'info', 'list', 'switch'])
   })
+
+  test('registers top-level workspace command with alias and subcommands', () => {
+    const program = createProgram()
+    const workspace = program.commands.find(command => command.name() === 'workspace')
+
+    expect(workspace).toBeDefined()
+    expect(workspace?.aliases()).toContain('ws')
+    expect(workspace?.commands.map(command => command.name())).toEqual(['switch', 'list', 'current'])
+  })
 })

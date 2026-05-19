@@ -27,8 +27,6 @@ src/
 │   ├── quota/                # Resource quotas
 │   │   └── index.ts
 │   ├── app/                  # Application management
-│   │   └── index.ts
-│   └── config/               # CLI configuration
 │       └── index.ts
 ├── lib/                       # Shared libraries
 │   ├── api-client.ts         # OpenAPI client factories
@@ -53,6 +51,7 @@ src/
 - Type-safe clients generated from `src/docs/*_openapi.json`
 - Routes template calls to `template.<region>/api/v2alpha`
 - Routes database calls to `dbprovider.<region>/api/v2alpha`
+- Routes devbox calls to `devbox.<region>/api/v2alpha`
 
 ### Output Formatting (`lib/output.ts`)
 
@@ -145,7 +144,7 @@ sealos workspace current
 
 ```bash
 # Create a devbox
-sealos devbox create --name my-devbox --template nextjs --cpu 2c --memory 4g
+sealos devbox create --name my-devbox --runtime next.js --cpu 2c --memory 4g --port 3000:http:public
 
 # List devboxes
 sealos devbox list
@@ -154,17 +153,31 @@ sealos devbox list --output json
 # Get devbox details
 sealos devbox get my-devbox
 
-# Connect to devbox
-sealos devbox connect my-devbox --ide cursor
+# Update resources or ports
+sealos devbox update my-devbox --cpu 4 --memory 8 --port portName=web,number=3000,protocol=http,isPublic=true
 
-# Start/Stop/Restart
+# Start/Pause/Shutdown/Restart
 sealos devbox start my-devbox
-sealos devbox stop my-devbox
+sealos devbox pause my-devbox
+sealos devbox shutdown my-devbox
 sealos devbox restart my-devbox
 
+# Configure autostart and inspect monitor data
+sealos devbox autostart my-devbox --exec-command "npm start"
+sealos devbox monitor my-devbox --step 2m
+
+# Templates, releases, and deployments
+sealos devbox templates
+sealos devbox releases list my-devbox
+sealos devbox releases create my-devbox --tag v1-0-0 --description "First release"
+sealos devbox releases deploy my-devbox v1-0-0
+sealos devbox deployments my-devbox
+
 # Delete devbox
-sealos devbox delete my-devbox --force
+sealos devbox delete my-devbox
 ```
+
+Implementation: `src/commands/devbox/index.ts`, backed by `src/docs/devbox_openapi.json`.
 
 ### Database Management
 
@@ -201,34 +214,20 @@ sealos database logs <pod-name> --db-type postgresql --log-type runtimeLog --log
 
 Implementation: `src/commands/database/index.ts`
 
-### Configuration
-
-```bash
-# List all config
-sealos config list
-
-# Get config value
-sealos config get currentContext
-
-# Set config value
-sealos config set key value
-```
-
 ## Environment Variables
 
 - `SEALOS_REGION`: Default Sealos region URL for auth and public provider endpoints
 - `SEALOS_DATABASE_HOST`: Override database provider host for database commands
+- `SEALOS_DEVBOX_HOST`: Override devbox provider host for devbox commands
 - `DEBUG`: Enable debug mode for verbose error output
 
 ## TODO
 
-Most command implementations contain TODO comments indicating where API integration is needed. Key areas:
+Some command implementations still contain TODO comments where API integration is needed. Key areas:
 
 1. **S3 Operations**: File upload/download with progress tracking
-2. **Devbox Management**: Connect devbox commands to actual Sealos API endpoints
-3. **Interactive Prompts**: Use inquirer for confirmations
-4. **YAML Support**: Add YAML output formatting
-5. **Config Nesting**: Support nested config key access
+2. **Interactive Prompts**: Use inquirer for confirmations
+3. **YAML Support**: Add YAML output formatting
 
 ## Best Practices Implemented
 
@@ -238,7 +237,6 @@ Most command implementations contain TODO comments indicating where API integrat
 - Consistent error handling
 - Multiple output formats
 - Environment variable support
-- Configuration file management
 - Loading indicators for async operations
 - Color-coded terminal output
 
