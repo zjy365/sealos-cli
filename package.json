@@ -69,13 +69,13 @@
     "kubernetes",
     "deployment"
   ],
-  "homepage": "https://github.com/zjy365/sealos-cli.git",
+  "homepage": "https://github.com/zjy365/sealos-cli",
   "bugs": {
-    "url": "https://github.com/zjy365/sealos-cli.git/issues"
+    "url": "https://github.com/zjy365/sealos-cli/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zjy365/sealos-cli.git"
+    "url": "https://github.com/zjy365/sealos-cli"
   },
   "dependencies": {
     "axios": "^1.15.0",
