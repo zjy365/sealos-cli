@@ -7,7 +7,8 @@ tool to manage semantic versioning and release notes.
 
 This project publishes with the repository secret `NPM_TOKEN`, which must contain
 an npm token with permission to publish `sealos-cli`. Keep the token in GitHub
-repository secrets, not in source control.
+repository secrets, not in source control. The workflow exports this secret as
+both `NPM_TOKEN` for Changesets and `NODE_AUTH_TOKEN` for npm CLI publishing.
 
 As an alternative to `NPM_TOKEN`, npm Trusted Publishing can be configured for
 this package:
