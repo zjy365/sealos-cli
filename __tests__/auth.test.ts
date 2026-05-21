@@ -243,6 +243,54 @@ describe('auth service', () => {
     })
   })
 
+  test('listWorkspaces accepts successful Sealos business code envelopes', async () => {
+    const deps = makeDeps([
+      {
+        body: {
+          code: 200,
+          message: 'success',
+          data: {
+            namespaces: [
+              { uid: 'private-1', id: 'private', teamName: 'Private', role: 'owner', nstype: 'private' }
+            ]
+          }
+        }
+      }
+    ])
+    saveAuth({
+      region: 'https://usw-1.sealos.io',
+      regional_token: 'regional-token',
+      current_workspace: { uid: 'private-1', id: 'private', teamName: 'Private' }
+    }, deps)
+
+    await expect(listWorkspaces(deps)).resolves.toEqual({
+      current: 'private',
+      workspaces: [
+        { uid: 'private-1', id: 'private', teamName: 'Private', role: 'owner', nstype: 'private' }
+      ]
+    })
+  })
+
+  test('listWorkspaces asks users to login again when regional token is expired', async () => {
+    const deps = makeDeps([
+      {
+        body: {
+          code: 401,
+          message: 'token verify error',
+          data: null
+        }
+      }
+    ])
+    saveAuth({
+      region: 'https://usw-1.sealos.io',
+      regional_token: 'expired-regional-token',
+      current_workspace: { uid: 'private-1', id: 'private', teamName: 'Private' }
+    }, deps)
+
+    await expect(listWorkspaces(deps))
+      .rejects.toThrow(/Authentication expired\. Please run "sealos-cli login" again\. \(token verify error\)/)
+  })
+
   test('switchWorkspace matches by team name and refreshes token plus kubeconfig', async () => {
     const deps = makeDeps([
       {

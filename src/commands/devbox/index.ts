@@ -33,6 +33,7 @@ interface DevboxUpdateOptions {
   cpu?: string
   memory?: string
   port: string[]
+  output: string
 }
 
 interface DevboxReleaseOptions {
@@ -40,6 +41,7 @@ interface DevboxReleaseOptions {
   description?: string
   execCommand?: string
   noStart?: boolean
+  output: string
 }
 
 function formatValue (value: unknown): string {
@@ -398,7 +400,7 @@ export function createDevboxCommand (): Command {
   devboxCmd
     .command('list')
     .description('List all devboxes')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading devboxes...' }, async (ctx, options: { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.GET('/devbox', {
@@ -427,7 +429,7 @@ export function createDevboxCommand (): Command {
     .option('--env <NAME=VALUE>', 'Environment variable', collectOption, [] as string[])
     .option('--secret-env <NAME=SECRET:KEY>', 'Environment variable from secret', collectOption, [] as string[])
     .option('--autostart', 'Auto start devbox after creation')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Creating devbox...' }, async (ctx, options: DevboxCreateOptions & { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.POST('/devbox', {
@@ -449,7 +451,7 @@ export function createDevboxCommand (): Command {
   devboxCmd
     .command('get <name>')
     .description('Get devbox details')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading devbox...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.GET('/devbox/{name}', {
@@ -475,6 +477,7 @@ export function createDevboxCommand (): Command {
     .option('--cpu <cpu>', 'CPU cores')
     .option('--memory <memory>', 'Memory in GB')
     .option('--port <spec>', 'Port spec. Existing ports can include portName=...', collectOption, [] as string[])
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Updating devbox...' }, async (ctx, name: string, options: DevboxUpdateOptions) => {
       const client = createDevboxClient()
       const { error, response } = await client.PATCH('/devbox/{name}', {
@@ -486,6 +489,17 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'update',
+          resource: 'devbox',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Devbox "${name}" update requested`)
     }))
 
@@ -493,7 +507,8 @@ export function createDevboxCommand (): Command {
     .command('delete <name>')
     .description('Delete a devbox')
     .alias('rm')
-    .action(withAuth({ spinnerText: 'Deleting devbox...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Deleting devbox...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { error, response } = await client.DELETE('/devbox/{name}', {
         headers: ctx.auth,
@@ -503,6 +518,17 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'delete',
+          resource: 'devbox',
+          name,
+          status: 'deleted'
+        })
+        return
+      }
       ctx.spinner.succeed(`Devbox "${name}" deleted`)
     }))
 
@@ -520,26 +546,40 @@ export function createDevboxCommand (): Command {
 
     if (action.alias) command.alias(action.alias)
 
-    command.action(withAuth({ spinnerText: action.spinnerText }, async (ctx, name: string) => {
-      const client = createDevboxClient()
-      const { error, response } = await client.POST(action.endpoint, {
-        headers: ctx.auth,
-        params: {
-          path: { name }
-        },
-        body: {}
-      } as any)
+    command
+      .option('-o, --output <format>', 'Output format (json|table)', 'json')
+      .action(withAuth({ spinnerText: action.spinnerText }, async (ctx, name: string, options: { output: string }) => {
+        const client = createDevboxClient()
+        const { error, response } = await client.POST(action.endpoint, {
+          headers: ctx.auth,
+          params: {
+            path: { name }
+          },
+          body: {}
+        } as any)
 
-      if (error) throw mapApiError(response.status, error as ApiErrorBody)
-      ctx.spinner.succeed(`Devbox "${name}" ${action.done}`)
-    }))
+        if (error) throw mapApiError(response.status, error as ApiErrorBody)
+        if (options.output === 'json') {
+          ctx.spinner.stop()
+          outputJson({
+            success: true,
+            action: action.name,
+            resource: 'devbox',
+            name,
+            status: 'requested'
+          })
+          return
+        }
+        ctx.spinner.succeed(`Devbox "${name}" ${action.done}`)
+      }))
   }
 
   devboxCmd
     .command('autostart <name>')
     .description('Configure devbox autostart')
     .option('--exec-command <command>', 'Command to execute when the devbox starts')
-    .action(withAuth({ spinnerText: 'Configuring autostart...' }, async (ctx, name: string, options: { execCommand?: string }) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Configuring autostart...' }, async (ctx, name: string, options: { execCommand?: string; output: string }) => {
       const client = createDevboxClient()
       const body = options.execCommand ? { execCommand: options.execCommand } : {}
       const { error, response } = await client.POST('/devbox/{name}/autostart', {
@@ -551,6 +591,18 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'autostart',
+          resource: 'devbox',
+          name,
+          execCommand: options.execCommand ?? null,
+          status: 'configured'
+        })
+        return
+      }
       ctx.spinner.succeed(`Autostart configured for "${name}"`)
     }))
 
@@ -560,7 +612,7 @@ export function createDevboxCommand (): Command {
     .option('--start <timestamp>', 'Start timestamp in seconds or milliseconds')
     .option('--end <timestamp>', 'End timestamp in seconds or milliseconds')
     .option('--step <step>', 'Sampling interval, e.g. 2m')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading monitor data...' }, async (
       ctx,
       name: string,
@@ -592,7 +644,7 @@ export function createDevboxCommand (): Command {
   devboxCmd
     .command('templates')
     .description('List available devbox templates')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading devbox templates...' }, async (ctx, options: { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.GET('/devbox/templates', {
@@ -616,7 +668,7 @@ export function createDevboxCommand (): Command {
   releasesCommand
     .command('list <name>')
     .description('List devbox releases')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading releases...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.GET('/devbox/{name}/releases', {
@@ -643,6 +695,7 @@ export function createDevboxCommand (): Command {
     .option('--description <description>', 'Release description')
     .option('--exec-command <command>', 'Autostart command after release restart')
     .option('--no-start', 'Keep devbox stopped after the release build completes')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Creating release...' }, async (ctx, name: string, options: DevboxReleaseOptions) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.POST('/devbox/{name}/releases', {
@@ -654,6 +707,11 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson(data)
+        return
+      }
       ctx.spinner.succeed(`Release "${options.tag}" accepted for "${data.name}" (${data.status})`)
     }))
 
@@ -661,7 +719,8 @@ export function createDevboxCommand (): Command {
     .command('delete <name> <tag>')
     .alias('rm')
     .description('Delete a devbox release')
-    .action(withAuth({ spinnerText: 'Deleting release...' }, async (ctx, name: string, tag: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Deleting release...' }, async (ctx, name: string, tag: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { error, response } = await client.DELETE('/devbox/{name}/releases/{tag}', {
         headers: ctx.auth,
@@ -671,13 +730,26 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'delete',
+          resource: 'devbox-release',
+          name,
+          tag,
+          status: 'deleted'
+        })
+        return
+      }
       ctx.spinner.succeed(`Release "${tag}" deleted for "${name}"`)
     }))
 
   releasesCommand
     .command('deploy <name> <tag>')
     .description('Deploy a release to AppLaunchpad')
-    .action(withAuth({ spinnerText: 'Deploying release...' }, async (ctx, name: string, tag: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Deploying release...' }, async (ctx, name: string, tag: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { error, response } = await client.POST('/devbox/{name}/releases/{tag}/deploy', {
         headers: ctx.auth,
@@ -687,13 +759,25 @@ export function createDevboxCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'deploy',
+          resource: 'devbox-release',
+          name,
+          tag,
+          status: 'deployed'
+        })
+        return
+      }
       ctx.spinner.succeed(`Release "${tag}" deployed for "${name}"`)
     }))
 
   devboxCmd
     .command('deployments <name>')
     .description('List deployed applications from a devbox')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading deployments...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDevboxClient()
       const { data, error, response } = await client.GET('/devbox/{name}/deployments', {

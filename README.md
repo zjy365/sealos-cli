@@ -49,7 +49,9 @@ src/
 
 ### Output Formatting (`lib/output.ts`)
 
-- JSON and table output helpers for command responses
+- JSON is the default output for registered commands so agents and scripts can parse results reliably
+- Table output is available with `-o table` / `--output table` for human inspection
+- Plain text output is available only where explicitly documented, such as database logs with `-o plain`
 - Colored terminal output using chalk
 - Loading spinners using ora
 - Table formatting using table
@@ -142,7 +144,7 @@ sealos-cli devbox create --name my-devbox --runtime next.js --cpu 2c --memory 4g
 
 # List devboxes
 sealos-cli devbox list
-sealos-cli devbox list --output json
+sealos-cli devbox list --output table
 
 # Get devbox details
 sealos-cli devbox get my-devbox
@@ -204,6 +206,7 @@ sealos-cli database enable-public my-db
 sealos-cli database disable-public my-db
 sealos-cli database log-files <pod-name> --db-type postgresql --log-type runtimeLog
 sealos-cli database logs <pod-name> --db-type postgresql --log-type runtimeLog --log-path /path/to/log
+sealos-cli database logs <pod-name> --db-type postgresql --log-type runtimeLog --log-path /path/to/log -o plain
 ```
 
 Implementation: `src/commands/database/index.ts`
@@ -225,7 +228,8 @@ The v1 command surface is limited to auth, workspace, template, database, and de
 - TypeScript for type safety
 - Shared utilities for common operations
 - Consistent error handling
-- JSON and table output formats
+- JSON output by default for agent and automation use
+- Optional table output with `-o table`
 - Environment variable support
 - Loading indicators for async operations
 - Color-coded terminal output

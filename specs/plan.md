@@ -152,7 +152,7 @@ cat template.yaml | sealos template deploy [--dry-run]
 ```bash
 Flags:
   -c, --category string   按类别筛选
-  -o, --output string     输出格式: json, table (default: "table")
+  -o, --output string     输出格式: json, table (default: "json")
   --name string           实例名称 (从目录部署时必填)
   --file string           模板 YAML 文件路径
   --yaml string           模板 YAML 字符串
@@ -264,10 +264,9 @@ env:
 ## 10. 输出格式
 
 ```bash
-# 支持多种输出格式
+# 默认输出 JSON，便于 Agent 和脚本解析
 sealos devbox list --output=json
-sealos devbox list --output=yaml
-sealos devbox list --output=table  # default
+sealos devbox list --output=table  # 人类可读表格
 sealos devbox list -o json
 
 # 筛选输出

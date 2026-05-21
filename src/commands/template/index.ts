@@ -12,6 +12,7 @@ interface TemplateDeployOptions {
   yaml?: string
   set: string[]
   dryRun?: boolean
+  output: string
 }
 
 export type TemplateDeployMode = 'catalog' | 'raw'
@@ -208,6 +209,11 @@ export function createTemplateCommand (): Command {
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
+      if (deployOptions.output === 'json') {
+        ctx.spinner.stop()
+        outputJson(data)
+        return
+      }
       ctx.spinner.succeed(`Instance "${data.name}" created successfully`)
       printInstanceResult(data, { template: catalogTemplate })
       return
@@ -223,6 +229,12 @@ export function createTemplateCommand (): Command {
     })
 
     if (error) throw mapApiError(response.status, error as ApiErrorBody)
+
+    if (deployOptions.output === 'json') {
+      ctx.spinner.stop()
+      outputJson(data)
+      return
+    }
 
     if (deployOptions.dryRun) {
       ctx.spinner.succeed('Raw template validation passed; no resources were created')
@@ -240,7 +252,7 @@ export function createTemplateCommand (): Command {
     .description('List available templates')
     .option('-c, --category <category>', 'Filter by category')
     .option('-l, --language <language>', 'Language code (for example: en, zh)')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withErrorHandling({ spinnerText: 'Loading templates...' }, async (ctx, options: { category?: string; language?: string; output: string }) => {
       const client = createTemplateClient()
       const { data, error, response } = await client.GET('/templates', {
@@ -281,7 +293,7 @@ export function createTemplateCommand (): Command {
     .alias('describe')
     .description('Get template details')
     .option('-l, --language <language>', 'Language code (for example: en, zh)')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withErrorHandling({ spinnerText: 'Loading template...' }, async (ctx, name: string, options: { language?: string; output: string }) => {
       const client = createTemplateClient()
       const { data, error, response } = await client.GET('/templates/{name}', {
@@ -338,7 +350,8 @@ export function createTemplateCommand (): Command {
     .command('delete <instance>')
     .alias('rm')
     .description('Delete a deployed template instance')
-    .action(withAuth({ spinnerText: 'Deleting template instance...' }, async (ctx, instance: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Deleting template instance...' }, async (ctx, instance: string, options: { output: string }) => {
       const client = createTemplateClient()
       const { error, response } = await client.DELETE('/templates/instances/{instanceName}', {
         headers: ctx.auth,
@@ -349,6 +362,17 @@ export function createTemplateCommand (): Command {
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'delete',
+          resource: 'template-instance',
+          instance,
+          status: 'deleted'
+        })
+        return
+      }
       ctx.spinner.succeed(`Instance "${instance}" deleted`)
     }))
 
@@ -361,6 +385,7 @@ export function createTemplateCommand (): Command {
     .option('--yaml <yaml>', 'Template YAML string')
     .option('--set <KEY=VALUE...>', 'Set template arguments', (val: string, prev: string[]) => [...prev, val], [] as string[])
     .option('--dry-run', 'Validate raw template YAML without creating resources')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .addHelpText('after', `
 Examples:
   Catalog:

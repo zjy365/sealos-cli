@@ -268,7 +268,7 @@ export function createDatabaseCommand (): Command {
   dbCmd
     .command('list')
     .description('List databases')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading databases...' }, async (ctx, options: { output: string }) => {
       const client = createDatabaseClient()
       const { data, error, response } = await client.GET('/databases', {
@@ -319,7 +319,7 @@ export function createDatabaseCommand (): Command {
   dbCmd
     .command('versions')
     .description('List supported database versions (public endpoint)')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .option('--host <host>', 'Sealos region host for public version lookup, e.g. https://gzg.sealos.run')
     .option('--type <type>', 'Filter versions by database type')
     .action(withErrorHandling({ spinnerText: 'Loading versions...' }, async (ctx, options: { output: string; host?: string; type?: string }) => {
@@ -384,7 +384,7 @@ export function createDatabaseCommand (): Command {
     .option('--backup-save-time <count>', 'Retention count')
     .option('--backup-save-type <type>', 'Retention unit (days|hours|weeks|months)')
     .option('--param <KEY=VALUE>', 'Database parameter override', collectOption, [] as string[])
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Creating database...'
     }, async (
@@ -452,7 +452,7 @@ export function createDatabaseCommand (): Command {
     .command('get <name>')
     .alias('describe')
     .description('Get database details')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading database...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { data, error, response } = await client.GET('/databases/{databaseName}', {
@@ -477,7 +477,7 @@ export function createDatabaseCommand (): Command {
   dbCmd
     .command('connection <name>')
     .description('Show database connection details')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading connection details...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { data, error, response } = await client.GET('/databases/{databaseName}', {
@@ -506,12 +506,13 @@ export function createDatabaseCommand (): Command {
     .option('--memory <memory>', 'Memory in GB per replica')
     .option('--storage <storage>', 'Storage in GB per replica')
     .option('--replicas <replicas>', 'Replica count')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Updating database...'
     }, async (
       ctx,
       name: string,
-      options: { cpu?: string; memory?: string; storage?: string; replicas?: string }
+      options: { cpu?: string; memory?: string; storage?: string; replicas?: string; output: string }
     ) => {
       const quota = buildQuota(options)
       if (Object.keys(quota).length === 0) {
@@ -529,13 +530,25 @@ export function createDatabaseCommand (): Command {
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'update',
+          resource: 'database',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Database "${name}" update requested`)
     }))
 
   dbCmd
     .command('start <name>')
     .description('Start a database')
-    .action(withAuth({ spinnerText: 'Starting database...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Starting database...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.POST('/databases/{databaseName}/start', {
         headers: ctx.auth,
@@ -545,6 +558,17 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'start',
+          resource: 'database',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Database "${name}" start requested`)
     }))
 
@@ -552,7 +576,8 @@ export function createDatabaseCommand (): Command {
     .command('pause <name>')
     .alias('stop')
     .description('Pause a database')
-    .action(withAuth({ spinnerText: 'Pausing database...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Pausing database...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.POST('/databases/{databaseName}/pause', {
         headers: ctx.auth,
@@ -562,13 +587,25 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'pause',
+          resource: 'database',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Database "${name}" pause requested`)
     }))
 
   dbCmd
     .command('restart <name>')
     .description('Restart a database')
-    .action(withAuth({ spinnerText: 'Restarting database...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Restarting database...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.POST('/databases/{databaseName}/restart', {
         headers: ctx.auth,
@@ -578,6 +615,17 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'restart',
+          resource: 'database',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Database "${name}" restart requested`)
     }))
 
@@ -585,7 +633,8 @@ export function createDatabaseCommand (): Command {
     .command('delete <name>')
     .description('Delete a database')
     .option('-f, --force', 'Delete without confirmation')
-    .action(withAuth({ spinnerText: 'Deleting database...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Deleting database...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.DELETE('/databases/{databaseName}', {
         headers: ctx.auth,
@@ -595,13 +644,24 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'delete',
+          resource: 'database',
+          name,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Database "${name}" delete requested`)
     }))
 
   dbCmd
     .command('backups <name>')
     .description('List backups for a database')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading backups...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { data, error, response } = await client.GET('/databases/{databaseName}/backups', {
@@ -649,12 +709,13 @@ export function createDatabaseCommand (): Command {
     .description('Create a database backup')
     .option('--name <backupName>', 'Backup name')
     .option('--description <description>', 'Backup description')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Creating backup...'
     }, async (
       ctx,
       name: string,
-      options: { name?: string; description?: string }
+      options: { name?: string; description?: string; output: string }
     ) => {
       const client = createDatabaseClient()
       const body: Record<string, string> = {}
@@ -670,15 +731,28 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'backup',
+          resource: 'database',
+          name,
+          backupName: options.name ?? null,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Backup requested for database "${name}"`)
     }))
 
   dbCmd
     .command('backup-delete <databaseName> <backupName>')
     .description('Delete a database backup')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Deleting backup...'
-    }, async (ctx, databaseName: string, backupName: string) => {
+    }, async (ctx, databaseName: string, backupName: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.DELETE('/databases/{databaseName}/backups/{backupName}', {
         headers: ctx.auth,
@@ -688,6 +762,18 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'backup-delete',
+          resource: 'database-backup',
+          databaseName,
+          backupName,
+          status: 'deleted'
+        })
+        return
+      }
       ctx.spinner.succeed(`Backup "${backupName}" deleted`)
     }))
 
@@ -697,12 +783,13 @@ export function createDatabaseCommand (): Command {
     .requiredOption('--from <backupName>', 'Backup name to restore from')
     .option('--name <name>', 'Name for the restored database')
     .option('--replicas <replicas>', 'Replica count for the restored database')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Restoring database...'
     }, async (
       ctx,
       databaseName: string,
-      options: { from: string; name?: string; replicas?: string }
+      options: { from: string; name?: string; replicas?: string; output: string }
     ) => {
       const client = createDatabaseClient()
       const body: Record<string, unknown> = {}
@@ -718,13 +805,27 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'restore',
+          resource: 'database',
+          databaseName,
+          backupName: options.from,
+          restoredName: options.name ?? null,
+          status: 'requested'
+        })
+        return
+      }
       ctx.spinner.succeed(`Restore requested from backup "${options.from}"`)
     }))
 
   dbCmd
     .command('enable-public <name>')
     .description('Enable public access for a database')
-    .action(withAuth({ spinnerText: 'Enabling public access...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Enabling public access...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.POST('/databases/{databaseName}/enable-public', {
         headers: ctx.auth,
@@ -734,13 +835,25 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'enable-public',
+          resource: 'database',
+          name,
+          status: 'enabled'
+        })
+        return
+      }
       ctx.spinner.succeed(`Public access enabled for "${name}"`)
     }))
 
   dbCmd
     .command('disable-public <name>')
     .description('Disable public access for a database')
-    .action(withAuth({ spinnerText: 'Disabling public access...' }, async (ctx, name: string) => {
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .action(withAuth({ spinnerText: 'Disabling public access...' }, async (ctx, name: string, options: { output: string }) => {
       const client = createDatabaseClient()
       const { error, response } = await client.POST('/databases/{databaseName}/disable-public', {
         headers: ctx.auth,
@@ -750,6 +863,17 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      if (options.output === 'json') {
+        ctx.spinner.stop()
+        outputJson({
+          success: true,
+          action: 'disable-public',
+          resource: 'database',
+          name,
+          status: 'disabled'
+        })
+        return
+      }
       ctx.spinner.succeed(`Public access disabled for "${name}"`)
     }))
 
@@ -761,7 +885,7 @@ export function createDatabaseCommand (): Command {
     .requiredOption('--log-path <path>', 'Log path to read. Use "log-files" first to discover valid paths')
     .option('--page <page>', 'Page number', '1')
     .option('--page-size <pageSize>', 'Page size', '200')
-    .option('-o, --output <format>', 'Output format (plain|json|table)', 'plain')
+    .option('-o, --output <format>', 'Output format (json|table|plain)', 'json')
     .action(withAuth({
       spinnerText: 'Loading logs...'
     }, async (
@@ -820,7 +944,7 @@ export function createDatabaseCommand (): Command {
     .description('List database log files for a pod')
     .requiredOption('--db-type <type>', 'Database type used by the log service')
     .requiredOption('--log-type <type>', 'Log type used by the log service')
-    .option('-o, --output <format>', 'Output format (json|table)', 'table')
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({
       spinnerText: 'Loading log files...'
     }, async (

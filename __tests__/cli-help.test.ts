@@ -1,6 +1,26 @@
 import { execFileSync } from 'node:child_process'
+import type { Command } from 'commander'
 import { describe, expect, test } from 'vitest'
 import packageJson from '../package.json' with { type: 'json' }
+import { createProgram } from '../src/main.ts'
+
+interface CommandWithAction {
+  _actionHandler?: unknown
+}
+
+function collectActionCommands (command: Command, prefix: string[] = []): Array<{ path: string, command: Command }> {
+  return command.commands.flatMap(child => {
+    const path = [...prefix, child.name()]
+    const current = (child as unknown as CommandWithAction)._actionHandler
+      ? [{ path: path.join(' '), command: child }]
+      : []
+
+    return [
+      ...current,
+      ...collectActionCommands(child, path)
+    ]
+  })
+}
 
 describe('help output', () => {
   test('top-level help only exposes implemented command modules', () => {
@@ -73,5 +93,23 @@ describe('help output', () => {
       encoding: 'utf8'
     })
     expect(currentHelp).toMatch(/Output format: json, table/)
+  })
+
+  test('registered action commands expose JSON as the default output', () => {
+    const actionCommands = collectActionCommands(createProgram())
+    const missingOutputOption = actionCommands
+      .filter(({ command }) => command.options.every(option => option.long !== '--output'))
+      .map(({ path }) => path)
+
+    expect(missingOutputOption).toEqual([])
+
+    const nonJsonDefaults = actionCommands
+      .map(({ path, command }) => {
+        const outputOption = command.options.find(option => option.long === '--output')
+        return { path, defaultValue: outputOption?.defaultValue }
+      })
+      .filter(({ defaultValue }) => defaultValue !== 'json')
+
+    expect(nonJsonDefaults).toEqual([])
   })
 })

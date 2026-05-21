@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import type { SealosAuthData, SealosWorkspace } from '../types/index.ts'
+import { AuthError } from './errors.ts'
 
 export const SEALOS_AUTH_CLIENT_ID = 'af993c98-d19d-4bdc-b338-79b80dc4f8bf'
 export const DEFAULT_SEALOS_REGION = 'https://usw-1.sealos.io'
@@ -62,6 +63,11 @@ interface KubeconfigResponse {
   data?: {
     kubeconfig?: string
   }
+}
+
+interface SealosApiEnvelope {
+  code?: number
+  message?: string
 }
 
 export interface LoginResult {
@@ -236,7 +242,17 @@ export function getAuthInfo (deps: AuthDependencies = {}): AuthInfo {
 }
 
 async function parseResponse<T> (res: Response): Promise<T> {
-  return await res.json() as T
+  const body = await res.json() as T & SealosApiEnvelope
+  if (body && typeof body === 'object' && typeof body.code === 'number' && ![0, 200].includes(body.code)) {
+    const message = body.message || `Sealos API request failed with code ${body.code}`
+    if (body.code === 401) {
+      throw new AuthError(`Authentication expired. Please run "sealos-cli login" again. (${message})`)
+    }
+
+    throw new Error(message)
+  }
+
+  return body as T
 }
 
 async function readErrorBody (res: Response): Promise<string> {

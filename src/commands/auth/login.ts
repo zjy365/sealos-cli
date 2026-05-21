@@ -8,7 +8,7 @@ export function createLoginCommand (): Command {
     .description('Login to Sealos Cloud')
     .argument('[region]', 'Sealos region URL (e.g., https://usw-1.sealos.io)')
     .option('-t, --token <token>', 'Store a regional token without OAuth device login')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (region, options) => {
       try {
         const result = options.token

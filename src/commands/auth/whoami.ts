@@ -6,7 +6,7 @@ import { handleError, AuthError } from '../../lib/errors.ts'
 export function createWhoamiCommand (): Command {
   return new Command('whoami')
     .description('Display current user information')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (options) => {
       try {
         const authInfo = getAuthInfo()

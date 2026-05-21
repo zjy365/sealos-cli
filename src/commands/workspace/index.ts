@@ -12,7 +12,7 @@ export function createWorkspaceCommand (): Command {
     .command('switch')
     .description('Switch to another workspace')
     .argument('<namespace>', 'Workspace id, uid, or team name')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (namespace, options) => {
       try {
         const result = await switchWorkspace(namespace)
@@ -30,7 +30,7 @@ export function createWorkspaceCommand (): Command {
   workspaceCmd
     .command('list')
     .description('List all workspaces')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (options) => {
       try {
         const result = await listWorkspaces()
@@ -58,7 +58,7 @@ export function createWorkspaceCommand (): Command {
   workspaceCmd
     .command('current')
     .description('Show current workspace')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (options) => {
       try {
         const authInfo = getAuthInfo()

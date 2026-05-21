@@ -1,5 +1,11 @@
 # sealos-cli
 
+## 1.1.2
+
+### Patch Changes
+
+- Default registered CLI commands to JSON output for agent and automation use. Human-readable table output remains available with `-o table`, and database logs keep explicit plain text support with `-o plain`.
+
 ## 1.1.0
 
 ### Minor Changes

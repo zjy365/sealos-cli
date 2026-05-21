@@ -41,6 +41,8 @@ Each registered module exports factory functions that create Commander.js comman
 - `outputJson()` - JSON output
 - `outputYaml()` - legacy helper; generic YAML output is not part of v1 command options
 - `outputTable()` - Table formatting
+- Registered commands default to JSON output for agent and automation use
+- Human-readable table output remains available with `-o table`; database logs also support `-o plain`
 - `success()`, `error()`, `warn()`, `info()` - Colored messages
 - `spinner()` - Loading indicators
 

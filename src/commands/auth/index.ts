@@ -76,7 +76,7 @@ export function createAuthCommand (): Command {
   authCmd
     .command('list')
     .description('List all workspaces')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (options) => {
       try {
         const result = await listWorkspaces()
@@ -105,7 +105,7 @@ export function createAuthCommand (): Command {
     .command('switch')
     .description('Switch workspace')
     .argument('<namespace>', 'Workspace id, uid, or team name')
-    .option('-o, --output <format>', 'Output format: json, table', 'table')
+    .option('-o, --output <format>', 'Output format: json, table', 'json')
     .action(async (namespace, options) => {
       try {
         const result = await switchWorkspace(namespace)
