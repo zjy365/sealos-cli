@@ -5,10 +5,12 @@ tool to manage semantic versioning and release notes.
 
 ## Pre-requisites
 
-This project publishes with npm Trusted Publishing. Do not add a long-lived npm
-token to GitHub Actions unless Trusted Publishing is unavailable.
+This project publishes with the repository secret `NPM_TOKEN`, which must contain
+an npm token with permission to publish `sealos-cli`. Keep the token in GitHub
+repository secrets, not in source control.
 
-In npm, configure a trusted publisher for this package:
+As an alternative to `NPM_TOKEN`, npm Trusted Publishing can be configured for
+this package:
 
 ```text
 Publisher: GitHub Actions
@@ -17,8 +19,8 @@ Workflow file: release.yml
 Environment: leave empty
 ```
 
-The release workflow has `id-token: write`, which allows GitHub Actions to
-request short-lived OIDC credentials from npm during publishing.
+The release workflow keeps `id-token: write` so GitHub Actions can use npm
+Trusted Publishing if `NPM_TOKEN` is removed later.
 
 Permit GitHub Actions to create and approve pull requests:
 
