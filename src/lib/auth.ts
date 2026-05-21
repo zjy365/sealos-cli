@@ -141,7 +141,7 @@ export function saveAuth (auth: SealosAuthData, deps: AuthDependencies = {}): vo
 export function loadAuth (deps: AuthDependencies = {}): SealosAuthData {
   const { paths } = withDeps(deps)
   if (!existsSync(paths.authPath)) {
-    throw new Error('Not authenticated. Please run: sealos login')
+    throw new Error('Not authenticated. Please run: sealos-cli login')
   }
 
   return JSON.parse(readFileSync(paths.authPath, 'utf-8')) as SealosAuthData
@@ -172,7 +172,7 @@ export function getAuthHeaders (deps: AuthDependencies = {}): { Authorization: s
 export function requireAuth (deps: AuthDependencies = {}): { Authorization: string } {
   const headers = getAuthHeaders(deps)
   if (!headers) {
-    throw new Error('Authentication required. Please run "sealos login" first.')
+    throw new Error('Authentication required. Please run "sealos-cli login" first.')
   }
   return headers
 }
@@ -496,7 +496,7 @@ export async function loginWithDeviceFlow (region?: string, deps: AuthDependenci
 export async function listWorkspaces (deps: AuthDependencies = {}): Promise<WorkspaceListResult> {
   const auth = loadAuth(deps)
   if (!auth.regional_token) {
-    throw new Error('No regional_token found. Please run: sealos login')
+    throw new Error('No regional_token found. Please run: sealos-cli login')
   }
 
   const workspaces = await listRemoteWorkspaces(auth.region, auth.regional_token, deps)
@@ -514,13 +514,13 @@ export async function listWorkspaces (deps: AuthDependencies = {}): Promise<Work
 
 export async function switchWorkspace (target: string, deps: AuthDependencies = {}): Promise<SwitchWorkspaceResult> {
   if (!target) {
-    throw new Error('Usage: sealos auth switch <namespace-id-or-uid>')
+    throw new Error('Usage: sealos-cli auth switch <namespace-id-or-uid>')
   }
 
   const fullDeps = withDeps(deps)
   const auth = loadAuth(fullDeps)
   if (!auth.regional_token) {
-    throw new Error('No regional_token found. Please run: sealos login')
+    throw new Error('No regional_token found. Please run: sealos-cli login')
   }
 
   const workspaces = await listRemoteWorkspaces(auth.region, auth.regional_token, fullDeps)

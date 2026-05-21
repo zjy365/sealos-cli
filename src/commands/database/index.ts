@@ -445,7 +445,7 @@ export function createDatabaseCommand (): Command {
 
       ctx.spinner.succeed(`Database "${data.name}" created successfully`)
       console.log(chalk.dim(`  Provisioning status: ${data.status}`))
-      console.log(chalk.dim(`  Next: sealos database get ${data.name}`))
+      console.log(chalk.dim(`  Next: sealos-cli database get ${data.name}`))
     }))
 
   dbCmd

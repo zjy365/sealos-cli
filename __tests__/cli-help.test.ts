@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { describe, expect, test } from 'vitest'
+import packageJson from '../package.json' with { type: 'json' }
 
 describe('help output', () => {
   test('top-level help only exposes implemented command modules', () => {
@@ -8,6 +9,7 @@ describe('help output', () => {
       encoding: 'utf8'
     })
 
+    expect(help).toMatch(/Usage: sealos-cli/)
     expect(help).toMatch(/auth/)
     expect(help).toMatch(/workspace/)
     expect(help).toMatch(/devbox/)
@@ -16,6 +18,15 @@ describe('help output', () => {
     expect(help).not.toMatch(/\bs3\b/)
     expect(help).not.toMatch(/\bquota\b/)
     expect(help).not.toMatch(/\bapp\b/)
+  })
+
+  test('top-level version matches package version', () => {
+    const version = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', '--version'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    }).trim()
+
+    expect(version).toBe(packageJson.version)
   })
 
   test('template deploy help documents raw-only dry-run', () => {

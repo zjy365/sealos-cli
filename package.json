@@ -1,7 +1,7 @@
 {
   "name": "sealos-cli",
-  "version": "1.0.0",
-  "description": "Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and object storage",
+  "version": "1.1.0",
+  "description": "Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, and templates",
   "types": "dist/main.d.ts",
   "type": "module",
   "bin": {
@@ -64,10 +64,11 @@
     "cli",
     "cloud",
     "devbox",
-    "s3",
     "database",
     "kubernetes",
-    "deployment"
+    "deployment",
+    "template",
+    "workspace"
   ],
   "homepage": "https://github.com/zjy365/sealos-cli.git",
   "bugs": {

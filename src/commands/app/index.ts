@@ -3,16 +3,17 @@ import { handleError } from '../../lib/errors.ts'
 
 export function createAppCommand (): Command {
   const appCmd = new Command('app')
-    .description('Manage applications')
+    .description('Future application placeholder outside the v1 release surface')
 
-  // TODO: 实现应用相关命令
+  // Future, non-v1 placeholder. Do not register this command until application
+  // APIs are implemented and ready for release.
 
   appCmd
     .command('list')
-    .description('List all applications')
+    .description('Future application list placeholder outside the v1 release surface')
     .action(async () => {
       try {
-        console.log('TODO: Implement app list')
+        console.log('Application commands are not part of the v1 release surface yet.')
       } catch (error) {
         handleError(error)
       }

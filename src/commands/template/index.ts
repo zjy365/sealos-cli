@@ -364,12 +364,12 @@ export function createTemplateCommand (): Command {
     .addHelpText('after', `
 Examples:
   Catalog:
-    sealos template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
+    sealos-cli template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
 
   Raw:
-    sealos template deploy --file ./template.yaml --dry-run
-    sealos template deploy --yaml 'apiVersion: app.sealos.io/v1\nkind: Template\n...'
-    cat template.yaml | sealos template deploy --dry-run
+    sealos-cli template deploy --file ./template.yaml --dry-run
+    sealos-cli template deploy --yaml 'apiVersion: app.sealos.io/v1\nkind: Template\n...'
+    cat template.yaml | sealos-cli template deploy --dry-run
 `)
     .action(async (template: string | undefined, options: TemplateDeployOptions) => {
       const mode = resolveTemplateDeployMode(template, options)

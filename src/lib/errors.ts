@@ -14,7 +14,7 @@ export class CliError extends Error {
  * Authentication error
  */
 export class AuthError extends CliError {
-  constructor (message: string = 'Authentication required. Please run "sealos login" first.') {
+  constructor (message: string = 'Authentication required. Please run "sealos-cli login" first.') {
     super(message, 1)
     this.name = 'AuthError'
   }

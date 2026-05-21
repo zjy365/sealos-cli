@@ -15,7 +15,7 @@ function resolveHost (options?: { baseUrl?: string }): string {
 
   const host = options?.baseUrl || process.env.SEALOS_REGION || authRegion || DEFAULT_SEALOS_REGION
   if (!host) {
-    throw new ConfigError('No Sealos Cloud host configured. Run "sealos login <host>" first.')
+    throw new ConfigError('No Sealos Cloud host configured. Run "sealos-cli login <host>" first.')
   }
   return host.replace(/\/+$/, '')
 }

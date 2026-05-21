@@ -6,14 +6,15 @@ import { createDevboxCommand } from './commands/devbox/index.ts'
 import { createDatabaseCommand } from './commands/database/index.ts'
 import { createTemplateCommand } from './commands/template/index.ts'
 import { handleError } from './lib/errors.ts'
+import packageJson from '../package.json' with { type: 'json' }
 
 export function createProgram (): Command {
   const program = new Command()
 
   program
-    .name('sealos')
+    .name('sealos-cli')
     .description('Official CLI tool for Sealos Cloud - Manage devbox, databases, templates, auth, and workspaces')
-    .version('0.0.1')
+    .version(packageJson.version)
 
   // Register all command modules
   registerAuthCommands(program)

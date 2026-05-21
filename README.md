@@ -1,6 +1,6 @@
 # Sealos CLI
 
-Official CLI tool for Sealos Cloud - Manage devbox, applications, databases, and object storage
+Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, and templates.
 
 ## Project Structure
 
@@ -18,16 +18,10 @@ src/
 │   │   └── index.ts
 │   ├── devbox/               # Devbox management
 │   │   └── index.ts
-│   ├── s3/                   # S3 object storage
-│   │   └── index.ts
 │   ├── database/             # Database management
 │   │   └── index.ts
 │   ├── template/             # Template management
 │   │   └── index.ts
-│   ├── quota/                # Resource quotas
-│   │   └── index.ts
-│   ├── app/                  # Application management
-│       └── index.ts
 ├── lib/                       # Shared libraries
 │   ├── api-client.ts         # OpenAPI client factories
 │   ├── auth.ts               # Sealos auth and kubeconfig headers
@@ -55,7 +49,7 @@ src/
 
 ### Output Formatting (`lib/output.ts`)
 
-- Support for multiple formats: JSON, YAML, Table
+- JSON and table output helpers for command responses
 - Colored terminal output using chalk
 - Loading spinners using ora
 - Table formatting using table
@@ -103,78 +97,78 @@ npm test
 
 ```bash
 # Login in browser and exchange for regional token + kubeconfig automatically
-sealos login https://usw-1.sealos.io
+sealos-cli login https://usw-1.sealos.io
 
 # Check current user
-sealos whoami
+sealos-cli whoami
 
 # Inspect auth and switch workspace
-sealos auth info
-sealos auth list
-sealos auth switch <workspace-id-or-team-name>
+sealos-cli auth info
+sealos-cli auth list
+sealos-cli auth switch <workspace-id-or-team-name>
 
 # Logout
-sealos logout
+sealos-cli logout
 ```
 
 ### Template Management
 
 ```bash
 # Deploy from the catalog
-sealos template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
+sealos-cli template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
 
 # Validate raw template YAML without creating resources
-sealos template deploy --file ./template.yaml --dry-run
+sealos-cli template deploy --file ./template.yaml --dry-run
 ```
 
 ### Workspace Management
 
 ```bash
 # List workspaces
-sealos workspace list
+sealos-cli workspace list
 
 # Switch workspace
-sealos workspace switch production
+sealos-cli workspace switch production
 
 # Show current workspace
-sealos workspace current
+sealos-cli workspace current
 ```
 
 ### Devbox Management
 
 ```bash
 # Create a devbox
-sealos devbox create --name my-devbox --runtime next.js --cpu 2c --memory 4g --port 3000:http:public
+sealos-cli devbox create --name my-devbox --runtime next.js --cpu 2c --memory 4g --port 3000:http:public
 
 # List devboxes
-sealos devbox list
-sealos devbox list --output json
+sealos-cli devbox list
+sealos-cli devbox list --output json
 
 # Get devbox details
-sealos devbox get my-devbox
+sealos-cli devbox get my-devbox
 
 # Update resources or ports
-sealos devbox update my-devbox --cpu 4 --memory 8 --port portName=web,number=3000,protocol=http,isPublic=true
+sealos-cli devbox update my-devbox --cpu 4 --memory 8 --port portName=web,number=3000,protocol=http,isPublic=true
 
 # Start/Pause/Shutdown/Restart
-sealos devbox start my-devbox
-sealos devbox pause my-devbox
-sealos devbox shutdown my-devbox
-sealos devbox restart my-devbox
+sealos-cli devbox start my-devbox
+sealos-cli devbox pause my-devbox
+sealos-cli devbox shutdown my-devbox
+sealos-cli devbox restart my-devbox
 
 # Configure autostart and inspect monitor data
-sealos devbox autostart my-devbox --exec-command "npm start"
-sealos devbox monitor my-devbox --step 2m
+sealos-cli devbox autostart my-devbox --exec-command "npm start"
+sealos-cli devbox monitor my-devbox --step 2m
 
 # Templates, releases, and deployments
-sealos devbox templates
-sealos devbox releases list my-devbox
-sealos devbox releases create my-devbox --tag v1-0-0 --description "First release"
-sealos devbox releases deploy my-devbox v1-0-0
-sealos devbox deployments my-devbox
+sealos-cli devbox templates
+sealos-cli devbox releases list my-devbox
+sealos-cli devbox releases create my-devbox --tag v1-0-0 --description "First release"
+sealos-cli devbox releases deploy my-devbox v1-0-0
+sealos-cli devbox deployments my-devbox
 
 # Delete devbox
-sealos devbox delete my-devbox
+sealos-cli devbox delete my-devbox
 ```
 
 Implementation: `src/commands/devbox/index.ts`, backed by `src/docs/devbox_openapi.json`.
@@ -183,33 +177,33 @@ Implementation: `src/commands/devbox/index.ts`, backed by `src/docs/devbox_opena
 
 ```bash
 # List databases
-sealos database list
+sealos-cli database list
 
 # Get database details
-sealos database get my-db
+sealos-cli database get my-db
 
 # Create a database
-sealos database create postgresql --name my-db --cpu 1 --memory 2 --storage 5 --replicas 1
+sealos-cli database create postgresql --name my-db --cpu 1 --memory 2 --storage 5 --replicas 1
 
 # Show connection details
-sealos database connection my-db
+sealos-cli database connection my-db
 
 # More commands
-sealos database --help
-sealos database <subcommand> --help
+sealos-cli database --help
+sealos-cli database <subcommand> --help
 
 # Operational commands backed by src/docs/database_openapi.json
-sealos database update my-db --cpu 2 --memory 4
-sealos database start my-db
-sealos database pause my-db
-sealos database restart my-db
-sealos database backup my-db --name manual-backup
-sealos database backups my-db
-sealos database restore my-db --from manual-backup --name restored-db
-sealos database enable-public my-db
-sealos database disable-public my-db
-sealos database log-files <pod-name> --db-type postgresql --log-type runtimeLog
-sealos database logs <pod-name> --db-type postgresql --log-type runtimeLog --log-path /path/to/log
+sealos-cli database update my-db --cpu 2 --memory 4
+sealos-cli database start my-db
+sealos-cli database pause my-db
+sealos-cli database restart my-db
+sealos-cli database backup my-db --name manual-backup
+sealos-cli database backups my-db
+sealos-cli database restore my-db --from manual-backup --name restored-db
+sealos-cli database enable-public my-db
+sealos-cli database disable-public my-db
+sealos-cli database log-files <pod-name> --db-type postgresql --log-type runtimeLog
+sealos-cli database logs <pod-name> --db-type postgresql --log-type runtimeLog --log-path /path/to/log
 ```
 
 Implementation: `src/commands/database/index.ts`
@@ -221,13 +215,9 @@ Implementation: `src/commands/database/index.ts`
 - `SEALOS_DEVBOX_HOST`: Override devbox provider host for devbox commands
 - `DEBUG`: Enable debug mode for verbose error output
 
-## TODO
+## v1 Scope
 
-Some command implementations still contain TODO comments where API integration is needed. Key areas:
-
-1. **S3 Operations**: File upload/download with progress tracking
-2. **Interactive Prompts**: Use inquirer for confirmations
-3. **YAML Support**: Add YAML output formatting
+The v1 command surface is limited to auth, workspace, template, database, and devbox operations. Future modules such as S3/object storage, quota inspection, and application management are intentionally not registered or documented as available commands.
 
 ## Best Practices Implemented
 
@@ -235,7 +225,7 @@ Some command implementations still contain TODO comments where API integration i
 - TypeScript for type safety
 - Shared utilities for common operations
 - Consistent error handling
-- Multiple output formats
+- JSON and table output formats
 - Environment variable support
 - Loading indicators for async operations
 - Color-coded terminal output

@@ -1,5 +1,11 @@
 # sealos-cli
 
+## 1.1.0
+
+### Minor Changes
+
+- Align the v1 release surface around the `sealos-cli` command name and package version output.
+
 ## 1.0.0
 
 ### Major Changes

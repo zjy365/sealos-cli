@@ -15,14 +15,11 @@ commands/
   auth/           - login, logout, whoami
   workspace/      - workspace management
   devbox/         - devbox operations
-  s3/             - object storage
   database/       - database management
   template/       - template operations
-  quota/          - resource quotas
-  app/            - application management
 ```
 
-Each module exports factory functions that create Commander.js command instances.
+Each registered module exports factory functions that create Commander.js command instances. Future placeholder modules may exist in `src/commands/`, but v1 only registers auth, workspace, devbox, database, and template commands.
 
 ### 2. Shared Libraries (`src/lib/`)
 
@@ -42,7 +39,7 @@ Each module exports factory functions that create Commander.js command instances
 #### `output.ts` - Output Formatting
 
 - `outputJson()` - JSON output
-- `outputYaml()` - YAML output (TODO)
+- `outputYaml()` - legacy helper; generic YAML output is not part of v1 command options
 - `outputTable()` - Table formatting
 - `success()`, `error()`, `warn()`, `info()` - Colored messages
 - `spinner()` - Loading indicators
@@ -208,11 +205,9 @@ export function createExampleCommand(): Command {
 
 ## Future Improvements
 
-1. Add YAML library for proper YAML output
+1. Implement future S3/object storage, quota, and application commands when APIs are available
 2. Implement interactive prompts (inquirer)
-3. Add progress bars for file uploads
-4. Add command aliases
-5. Add shell completion scripts
+3. Add shell completion scripts
 
 ---
 
@@ -252,10 +247,10 @@ src/commands/template/index.ts / src/commands/database/index.ts / src/commands/d
 
 ### Authentication: OAuth2 Device Grant Flow (RFC 8628)
 
-`sealos login [region]` triggers the device authorization flow.
+`sealos-cli login [region]` triggers the device authorization flow.
 
 ```text
-sealos login [region]
+sealos-cli login [region]
        │
        ▼
 auth.ts: requestDeviceAuthorization(region)

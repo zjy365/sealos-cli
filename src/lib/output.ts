@@ -10,12 +10,11 @@ export function outputJson (data: any): void {
 }
 
 /**
- * Output YAML format
+ * Output YAML format.
+ * Generic YAML output is not part of the v1 command surface.
  */
-export function outputYaml (data: any): void {
-  // TODO: Use yaml library to implement
-  console.log('YAML output not implemented yet')
-  console.log(data)
+export function outputYaml (_data: any): never {
+  throw new Error('YAML output is not supported in the v1 release. Use json or table output.')
 }
 
 /**
@@ -87,7 +86,7 @@ export function spinner (text: string): Ora {
  * Confirmation prompt
  */
 export async function confirm (message: string): Promise<boolean> {
-  // TODO: Use inquirer or other interactive library
+  // Non-interactive default for v1. Replace with a prompt implementation when needed.
   console.log(chalk.yellow('?'), message)
   return true
 }
