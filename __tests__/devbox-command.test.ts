@@ -64,7 +64,8 @@ describe('devbox command', () => {
     expect(buildUpdateDevboxBody({
       cpu: '0.5',
       memory: undefined,
-      port: ['portName=web,number=3000,protocol=ws,isPublic=true']
+      port: ['portName=web,number=3000,protocol=ws,isPublic=true'],
+      output: 'json'
     })).toEqual({
       quota: {
         cpu: 0.5
@@ -80,7 +81,8 @@ describe('devbox command', () => {
       tag: 'v1-0-0',
       description: 'First release',
       execCommand: 'npm start',
-      noStart: true
+      noStart: true,
+      output: 'json'
     })).toEqual({
       tag: 'v1-0-0',
       releaseDescription: 'First release',
@@ -94,6 +96,6 @@ describe('devbox command', () => {
     expect(() => parseNumericValue('0.01', 'cpu')).toThrow(/between 0.1 and 32/)
     expect(parsePortSpec('8080')).toEqual({ number: 8080 })
     expect(() => parsePortSpec('broken:http')).toThrow(/Invalid port number/)
-    expect(() => buildUpdateDevboxBody({ port: [] })).toThrow(/Provide at least one/)
+    expect(() => buildUpdateDevboxBody({ port: [], output: 'json' })).toThrow(/Provide at least one/)
   })
 })

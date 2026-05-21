@@ -11,6 +11,9 @@
     "module": "NodeNext",
     "target": "ES2022",
     "baseUrl": ".",
+    "types": [
+      "node"
+    ],
     "noEmit": true,
     "rootDir": "./src",
     "declaration": true,

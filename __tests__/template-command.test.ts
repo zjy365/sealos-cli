@@ -48,7 +48,8 @@ describe('template command', () => {
       resolveTemplateDeployMode('perplexica', {
         name: 'app',
         set: [],
-        dryRun: true
+        dryRun: true,
+        output: 'json'
       }, true)
     }).toThrow(/--dry-run is only supported for raw template deploys/)
   })
@@ -58,20 +59,29 @@ describe('template command', () => {
       resolveTemplateDeployMode('perplexica', {
         name: 'app',
         file: './template.yaml',
-        set: []
+        set: [],
+        output: 'json'
       }, true)
-    }).toThrow(/Cannot specify both a template name and --file\/--yaml\/stdin/)
+    }).toThrow(/Cannot specify both a template name and --file\/--yaml/)
   })
 
-  test('requires --name for catalog deploys', () => {
-    expect(() => {
-      resolveTemplateDeployMode('perplexica', {
-        set: []
-      }, true)
-    }).toThrow(/--name is required when deploying from the template catalog/)
+  test('catalog deploy is not treated as stdin raw input in non-tty environments', () => {
+    expect(resolveTemplateDeployMode('rybbit', { set: [], output: 'json' }, false)).toBe('catalog')
   })
 
-  test('builds catalog deploy request body without dryRun', () => {
+  test('defaults catalog instance name to template name', () => {
+    expect(resolveTemplateDeployMode('rybbit', { set: [], output: 'json' }, true)).toBe('catalog')
+    expect(
+      buildCatalogTemplateDeployBody('rybbit', {
+        set: []
+      })
+    ).toEqual({
+      name: 'rybbit',
+      template: 'rybbit'
+    })
+  })
+
+  test('builds catalog deploy request body with explicit instance name', () => {
     expect(
       buildCatalogTemplateDeployBody('perplexica', {
         name: 'app',
@@ -83,6 +93,17 @@ describe('template command', () => {
       args: {
         OPENAI_API_KEY: 'secret'
       }
+    })
+  })
+
+  test('builds catalog deploy request body with default instance name', () => {
+    expect(
+      buildCatalogTemplateDeployBody('rybbit', {
+        set: []
+      })
+    ).toEqual({
+      name: 'rybbit',
+      template: 'rybbit'
     })
   })
 

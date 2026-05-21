@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import type { Command } from 'commander'
 import { describe, expect, test } from 'vitest'
 import packageJson from '../package.json' with { type: 'json' }
@@ -55,8 +55,21 @@ describe('help output', () => {
       encoding: 'utf8'
     })
     expect(help).toMatch(/Validate raw template YAML without creating resources/)
+    expect(help).toMatch(/Instance name \(defaults to the catalog template name\)/)
+    expect(help).toMatch(/sealos-cli template deploy rybbit/)
     expect(help).toMatch(/Catalog:/)
     expect(help).toMatch(/Raw:/)
+  })
+
+  test('template deploy validation errors do not print stack traces', () => {
+    const result = spawnSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'template', 'deploy', 'rybbit', '--file', './template.yaml'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toMatch(/Error: Cannot specify both a template name and --file\/--yaml/)
+    expect(result.stderr).not.toMatch(/at resolveTemplateDeployMode/)
   })
 
   test('login help documents token limited mode', () => {

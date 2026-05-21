@@ -117,6 +117,7 @@ sealos-cli logout
 
 ```bash
 # Deploy from the catalog
+sealos-cli template deploy rybbit
 sealos-cli template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
 
 # Validate raw template YAML without creating resources

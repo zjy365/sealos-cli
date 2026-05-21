@@ -79,7 +79,7 @@ function makeDeps (responses: MockResponseOptions[] = []): Required<Pick<AuthDep
     now: () => new Date(nowMs),
     stderr: {
       write: () => true
-    } as NodeJS.WriteStream
+    } as unknown as NodeJS.WriteStream
   }
 }
 

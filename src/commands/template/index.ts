@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import { readFileSync } from 'node:fs'
 import { createTemplateClient } from '../../lib/api-client.ts'
-import { type ApiErrorBody, mapApiError } from '../../lib/errors.ts'
+import { type ApiErrorBody, handleError, mapApiError } from '../../lib/errors.ts'
 import { outputJson, outputTable } from '../../lib/output.ts'
 import { withAuth, withErrorHandling } from '../../lib/with-auth.ts'
 
@@ -83,18 +83,16 @@ export function resolveTemplateDeployMode (
   options: TemplateDeployOptions,
   stdinIsTTY: boolean = process.stdin.isTTY
 ): TemplateDeployMode {
-  const isRaw = !!(options.file || options.yaml || !stdinIsTTY)
+  const hasExplicitRawInput = !!(options.file || options.yaml)
+  const isRaw = hasExplicitRawInput || (!template && !stdinIsTTY)
 
-  if (template && isRaw) {
-    throw new Error('Cannot specify both a template name and --file/--yaml/stdin. Use one or the other.')
+  if (template && hasExplicitRawInput) {
+    throw new Error('Cannot specify both a template name and --file/--yaml. Use one or the other.')
   }
   if (!template && !isRaw) {
     throw new Error('Provide a template name or use --file/--yaml/stdin to supply raw YAML.')
   }
   if (template) {
-    if (!options.name) {
-      throw new Error('--name is required when deploying from the template catalog.')
-    }
     if (options.dryRun) {
       throw new Error('--dry-run is only supported for raw template deploys (--file, --yaml, or stdin).')
     }
@@ -109,7 +107,7 @@ export function buildCatalogTemplateDeployBody (
   options: Pick<TemplateDeployOptions, 'name' | 'set'>
 ): { name: string; template: string; args?: Record<string, string> } {
   const body: { name: string; template: string; args?: Record<string, string> } = {
-    name: options.name!,
+    name: options.name ?? template,
     template
   }
   if (options.set.length > 0) {
@@ -380,7 +378,7 @@ export function createTemplateCommand (): Command {
   tplCmd
     .command('deploy [template]')
     .description('Deploy a template (from catalog or raw YAML)')
-    .option('--name <name>', 'Instance name (required when deploying from catalog)')
+    .option('--name <name>', 'Instance name (defaults to the catalog template name)')
     .option('--file <path>', 'Path to template YAML file')
     .option('--yaml <yaml>', 'Template YAML string')
     .option('--set <KEY=VALUE...>', 'Set template arguments', (val: string, prev: string[]) => [...prev, val], [] as string[])
@@ -389,6 +387,7 @@ export function createTemplateCommand (): Command {
     .addHelpText('after', `
 Examples:
   Catalog:
+    sealos-cli template deploy rybbit
     sealos-cli template deploy perplexica --name my-app --set OPENAI_API_KEY=xxx
 
   Raw:
@@ -397,8 +396,12 @@ Examples:
     cat template.yaml | sealos-cli template deploy --dry-run
 `)
     .action(async (template: string | undefined, options: TemplateDeployOptions) => {
-      const mode = resolveTemplateDeployMode(template, options)
-      await deployTemplate(template, options, mode)
+      try {
+        const mode = resolveTemplateDeployMode(template, options)
+        await deployTemplate(template, options, mode)
+      } catch (error) {
+        handleError(error)
+      }
     })
 
   return tplCmd
