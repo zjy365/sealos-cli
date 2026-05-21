@@ -1,5 +1,11 @@
 # sealos-cli
 
+## 1.1.3
+
+### Patch Changes
+
+- Add database public access aliases and return console-compatible public connection strings.
+
 ## 1.1.2
 
 ### Patch Changes

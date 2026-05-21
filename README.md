@@ -203,6 +203,8 @@ sealos-cli database restart my-db
 sealos-cli database backup my-db --name manual-backup
 sealos-cli database backups my-db
 sealos-cli database restore my-db --from manual-backup --name restored-db
+sealos-cli database expose my-db
+sealos-cli database unexpose my-db
 sealos-cli database enable-public my-db
 sealos-cli database disable-public my-db
 sealos-cli database log-files <pod-name> --db-type postgresql --log-type runtimeLog

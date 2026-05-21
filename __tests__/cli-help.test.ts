@@ -108,6 +108,22 @@ describe('help output', () => {
     expect(currentHelp).toMatch(/Output format: json, table/)
   })
 
+  test('database help documents public access aliases', () => {
+    const databaseHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'database', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(databaseHelp).toMatch(/Usage: sealos-cli database\|db \[options\] \[command\]/)
+    expect(databaseHelp).toMatch(/enable-public\|expose/)
+    expect(databaseHelp).toMatch(/disable-public\|unexpose/)
+
+    const exposeHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'database', 'expose', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(exposeHelp).toMatch(/Enable public access for a database/)
+  })
+
   test('registered action commands expose JSON as the default output', () => {
     const actionCommands = collectActionCommands(createProgram())
     const missingOutputOption = actionCommands

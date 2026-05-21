@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
-import { createDatabaseClient } from '../../lib/api-client.ts'
+import { createDatabaseClient, resolveDbproviderHost } from '../../lib/api-client.ts'
+import { DEFAULT_SEALOS_REGION, loadAuth } from '../../lib/auth.ts'
 import { type ApiErrorBody, mapApiError } from '../../lib/errors.ts'
 import { outputJson, outputTable } from '../../lib/output.ts'
 import { withAuth, withErrorHandling } from '../../lib/with-auth.ts'
@@ -37,6 +38,46 @@ type DatabaseType = typeof SUPPORTED_DATABASE_TYPES[number]
 type LogDbType = typeof SUPPORTED_LOG_DB_TYPES[number]
 type LogType = typeof SUPPORTED_LOG_TYPES[number]
 
+interface LegacyApiResponse<T> {
+  code: number
+  message?: string
+  data?: T
+  error?: unknown
+}
+
+interface SecretResponse {
+  username: string
+  password: string
+  host: string
+  port: string
+  connection: string
+}
+
+interface ClientAppConfigResponse {
+  domain?: string
+}
+
+interface ServiceResponse {
+  spec?: {
+    ports?: Array<{
+      nodePort?: number
+      port?: number
+    }>
+  }
+}
+
+interface ConnectionDetails {
+  privateConnection?: {
+    endpoint?: string
+    host?: string
+    port?: string
+    username?: string
+    password?: string
+    connectionString?: string
+  } | null
+  publicConnection?: string | null
+}
+
 export function collectOption (value: string, previous: string[]): string[] {
   return [...previous, value]
 }
@@ -68,6 +109,52 @@ export function normalizeDatabaseType (type: string): DatabaseType {
   }
 
   return resolved
+}
+
+function getDatabaseConnectScheme (type: string): string {
+  const databaseType = normalizeDatabaseType(type)
+  const schemes: Record<DatabaseType, string> = {
+    postgresql: 'postgresql',
+    mongodb: 'mongodb',
+    'apecloud-mysql': 'mysql',
+    mysql: 'mysql',
+    redis: 'redis',
+    kafka: 'kafka',
+    qdrant: 'qdrant',
+    nebula: 'nebula',
+    weaviate: 'weaviate',
+    milvus: 'milvus',
+    pulsar: 'pulsar',
+    clickhouse: 'clickhouse'
+  }
+
+  return schemes[databaseType]
+}
+
+export function buildConsolePublicConnection (options: {
+  dbType: string
+  username?: string
+  password?: string
+  domain?: string
+  nodePort?: number | string | null
+}): string | null {
+  if (!options.domain || !options.nodePort) return null
+
+  const scheme = getDatabaseConnectScheme(options.dbType)
+  const port = String(options.nodePort)
+
+  if (scheme === 'kafka' || scheme === 'milvus') {
+    return `${options.domain}:${port}`
+  }
+
+  if (!options.username || !options.password) return null
+
+  let connection = `${scheme}://${options.username}:${options.password}@${options.domain}:${port}`
+  if (scheme === 'mongodb' || scheme === 'postgresql') {
+    connection += '/?directConnection=true'
+  }
+
+  return connection
 }
 
 export function normalizeLogDbType (type: string): LogDbType {
@@ -258,6 +345,103 @@ function printConnectionDetail (connection: any): void {
   }
 
   outputTable(rows)
+}
+
+function buildPublicAccessResult (action: 'enable-public' | 'disable-public', name: string, connection?: ConnectionDetails | null): Record<string, unknown> {
+  return {
+    success: true,
+    action,
+    resource: 'database',
+    name,
+    status: action === 'enable-public' ? 'enabled' : 'disabled',
+    publicConnection: connection?.publicConnection ?? null,
+    connection: connection ?? null
+  }
+}
+
+function getDatabaseProviderHost (): string {
+  const override = process.env.SEALOS_DATABASE_HOST?.trim()
+  if (override) {
+    return override.replace(/\/+$/, '')
+  }
+
+  let authRegion: string | undefined
+  try {
+    authRegion = loadAuth().region
+  } catch {
+    authRegion = undefined
+  }
+
+  return resolveDbproviderHost(process.env.SEALOS_REGION || authRegion || DEFAULT_SEALOS_REGION)
+}
+
+async function getLegacyApiData<T> (path: string, headers: { Authorization: string }): Promise<T> {
+  const url = new URL(path, getDatabaseProviderHost())
+  const response = await fetch(url, {
+    headers: {
+      Authorization: headers.Authorization
+    }
+  })
+  const body = await response.json() as LegacyApiResponse<T>
+
+  if (!response.ok || body.code !== 200) {
+    throw new Error(body.message || `Request failed: ${url.pathname}`)
+  }
+
+  return body.data as T
+}
+
+async function fetchConsoleConnectionDetails (
+  name: string,
+  dbType: string,
+  fallbackConnection: ConnectionDetails | null | undefined,
+  headers: { Authorization: string }
+): Promise<ConnectionDetails> {
+  const [secret, service, config] = await Promise.all([
+    getLegacyApiData<SecretResponse>(`/api/getSecretByName?dbName=${encodeURIComponent(name)}&dbType=${encodeURIComponent(dbType)}&mock=false`, headers),
+    getLegacyApiData<ServiceResponse>(`/api/getServiceByName?name=${encodeURIComponent(`${name}-export`)}`, headers).catch(() => null),
+    getLegacyApiData<ClientAppConfigResponse>('/api/platform/getClientAppConfig', headers).catch(() => null)
+  ])
+
+  const nodePort = service?.spec?.ports?.find(port => port.nodePort)?.nodePort
+  const publicConnection = buildConsolePublicConnection({
+    dbType,
+    username: secret.username,
+    password: secret.password,
+    domain: config?.domain,
+    nodePort
+  }) ?? fallbackConnection?.publicConnection ?? null
+
+  return {
+    privateConnection: {
+      endpoint: `${secret.host}:${secret.port}`,
+      host: secret.host,
+      port: secret.port,
+      username: secret.username,
+      password: secret.password,
+      connectionString: secret.connection
+    },
+    publicConnection
+  }
+}
+
+async function loadDatabaseConnectionDetails (
+  name: string,
+  headers: { Authorization: string }
+): Promise<ConnectionDetails | null> {
+  const client = createDatabaseClient()
+  const { data, error, response } = await client.GET('/databases/{databaseName}', {
+    headers,
+    params: {
+      path: { databaseName: name }
+    }
+  })
+
+  if (error) throw mapApiError(response.status, error as ApiErrorBody)
+
+  if (!data.type) return data.connection ?? null
+
+  return await fetchConsoleConnectionDetails(name, data.type, data.connection, headers)
 }
 
 export function createDatabaseCommand (): Command {
@@ -479,24 +663,16 @@ export function createDatabaseCommand (): Command {
     .description('Show database connection details')
     .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Loading connection details...' }, async (ctx, name: string, options: { output: string }) => {
-      const client = createDatabaseClient()
-      const { data, error, response } = await client.GET('/databases/{databaseName}', {
-        headers: ctx.auth,
-        params: {
-          path: { databaseName: name }
-        }
-      })
-
-      if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      const connection = await loadDatabaseConnectionDetails(name, ctx.auth)
 
       ctx.spinner.stop()
 
       if (options.output === 'json') {
-        outputJson(data.connection ?? null)
+        outputJson(connection)
         return
       }
 
-      printConnectionDetail(data.connection)
+      printConnectionDetail(connection)
     }))
 
   dbCmd
@@ -823,6 +999,7 @@ export function createDatabaseCommand (): Command {
 
   dbCmd
     .command('enable-public <name>')
+    .alias('expose')
     .description('Enable public access for a database')
     .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Enabling public access...' }, async (ctx, name: string, options: { output: string }) => {
@@ -835,22 +1012,20 @@ export function createDatabaseCommand (): Command {
       })
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
+      const connection = await loadDatabaseConnectionDetails(name, ctx.auth)
+
       if (options.output === 'json') {
         ctx.spinner.stop()
-        outputJson({
-          success: true,
-          action: 'enable-public',
-          resource: 'database',
-          name,
-          status: 'enabled'
-        })
+        outputJson(buildPublicAccessResult('enable-public', name, connection))
         return
       }
       ctx.spinner.succeed(`Public access enabled for "${name}"`)
+      printConnectionDetail(connection)
     }))
 
   dbCmd
     .command('disable-public <name>')
+    .alias('unexpose')
     .description('Disable public access for a database')
     .option('-o, --output <format>', 'Output format (json|table)', 'json')
     .action(withAuth({ spinnerText: 'Disabling public access...' }, async (ctx, name: string, options: { output: string }) => {
@@ -865,13 +1040,7 @@ export function createDatabaseCommand (): Command {
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
       if (options.output === 'json') {
         ctx.spinner.stop()
-        outputJson({
-          success: true,
-          action: 'disable-public',
-          resource: 'database',
-          name,
-          status: 'disabled'
-        })
+        outputJson(buildPublicAccessResult('disable-public', name))
         return
       }
       ctx.spinner.succeed(`Public access disabled for "${name}"`)
@@ -1000,6 +1169,28 @@ export function createDatabaseCommand (): Command {
 
       outputTable(rows)
     }))
+
+  dbCmd
+    .command('* [args...]', { hidden: true })
+    .option('-o, --output <format>', 'Output format (json|table)', 'json')
+    .allowUnknownOption()
+    .action(async (args: string[], options: { output: string }) => {
+      const [name, operation, ...rest] = args
+      const aliases: Record<string, string> = {
+        connection: 'connection',
+        connect: 'connection',
+        'enable-public': 'enable-public',
+        expose: 'expose',
+        'disable-public': 'disable-public',
+        unexpose: 'unexpose'
+      }
+      const command = operation ? aliases[operation] : undefined
+      if (!name || !command) {
+        throw new Error('Unknown database command. Use "sealos-cli database --help" to list supported commands.')
+      }
+
+      await dbCmd.parseAsync([command, name, ...rest, '--output', options.output], { from: 'user' })
+    })
 
   return dbCmd
 }

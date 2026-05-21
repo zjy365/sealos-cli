@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  buildConsolePublicConnection,
   buildAutoBackup,
   buildQuota,
   collectOption,
@@ -15,6 +16,30 @@ import {
 } from '../src/commands/database/index.ts'
 
 describe('database command helpers', () => {
+  test('builds console-compatible public connection strings', () => {
+    expect(buildConsolePublicConnection({
+      dbType: 'postgresql',
+      username: 'postgres',
+      password: 'secret',
+      domain: 'dbconn.usw-1.sealos.app',
+      nodePort: 41085
+    })).toBe('postgresql://postgres:secret@dbconn.usw-1.sealos.app:41085/?directConnection=true')
+
+    expect(buildConsolePublicConnection({
+      dbType: 'mysql',
+      username: 'root',
+      password: 'secret',
+      domain: 'dbconn.usw-1.sealos.app',
+      nodePort: 41086
+    })).toBe('mysql://root:secret@dbconn.usw-1.sealos.app:41086')
+
+    expect(buildConsolePublicConnection({
+      dbType: 'milvus',
+      domain: 'dbconn.usw-1.sealos.app',
+      nodePort: 41087
+    })).toBe('dbconn.usw-1.sealos.app:41087')
+  })
+
   test('normalizes database and log types', () => {
     expect(normalizeDatabaseType('postgres')).toBe('postgresql')
     expect(normalizeDatabaseType('mongo')).toBe('mongodb')
@@ -80,7 +105,8 @@ describe('database command helpers', () => {
     const command = createDatabaseCommand()
     expect(command.name()).toBe('database')
     expect(command.aliases()).toContain('db')
-    expect(command.commands.map(subcommand => subcommand.name())).toEqual([
+    const publicCommands = command.commands.filter(subcommand => subcommand.name() !== '*')
+    expect(publicCommands.map(subcommand => subcommand.name())).toEqual([
       'list',
       'versions',
       'create',
@@ -100,5 +126,8 @@ describe('database command helpers', () => {
       'logs',
       'log-files'
     ])
+
+    expect(command.commands.find(subcommand => subcommand.name() === 'enable-public')?.aliases()).toContain('expose')
+    expect(command.commands.find(subcommand => subcommand.name() === 'disable-public')?.aliases()).toContain('unexpose')
   })
 })
