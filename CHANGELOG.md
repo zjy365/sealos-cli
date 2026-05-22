@@ -1,5 +1,11 @@
 # sealos-cli
 
+## 1.1.5
+
+### Patch Changes
+
+- Patch security vulnerabilities and require HTTPS for remote Sealos hosts.
+
 ## 1.1.3
 
 ### Patch Changes
