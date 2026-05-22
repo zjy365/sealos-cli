@@ -13,6 +13,7 @@ import {
   getRegionalToken,
   listWorkspaces,
   loginWithDeviceFlow,
+  normalizeRegion,
   pollForToken,
   saveAuth,
   saveKubeconfig,
@@ -86,6 +87,14 @@ function makeDeps (responses: MockResponseOptions[] = []): Required<Pick<AuthDep
 const kubeconfig = 'apiVersion: v1\nclusters:\n- cluster:\n    server: https://kube.example\nusers:\n- user:\n    token: regional-token\n'
 
 describe('auth service', () => {
+  test('normalizeRegion requires https except localhost development hosts', () => {
+    expect(normalizeRegion('https://usw-1.sealos.io/')).toBe('https://usw-1.sealos.io')
+    expect(normalizeRegion('http://localhost:3000/')).toBe('http://localhost:3000')
+
+    expect(() => normalizeRegion('http://usw-1.sealos.io'))
+      .toThrow(/Sealos region must use https:\/\/ except for localhost/)
+  })
+
   test('loginWithDeviceFlow saves auth.json and kubeconfig after OAuth device flow', async () => {
     const deps = makeDeps([
       {

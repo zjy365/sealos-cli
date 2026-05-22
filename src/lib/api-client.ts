@@ -4,6 +4,7 @@ import type { paths as DatabasePaths } from '../generated/database.ts'
 import type { paths as DevboxPaths } from '../generated/devbox.ts'
 import { DEFAULT_SEALOS_REGION, loadAuth } from './auth.ts'
 import { ConfigError } from './errors.ts'
+import { normalizeSealosUrl } from './hosts.ts'
 
 function resolveHost (options?: { baseUrl?: string }): string {
   let authRegion: string | undefined
@@ -17,7 +18,7 @@ function resolveHost (options?: { baseUrl?: string }): string {
   if (!host) {
     throw new ConfigError('No Sealos Cloud host configured. Run "sealos-cli login <host>" first.')
   }
-  return host.replace(/\/+$/, '')
+  return normalizeSealosUrl(host, 'Sealos host')
 }
 
 export function resolveDbproviderHost (host: string): string {
@@ -33,7 +34,7 @@ export function resolveDevboxProviderHost (host: string): string {
 }
 
 function resolvePrefixedHost (host: string, prefix: string): string {
-  const url = new URL(host)
+  const url = new URL(normalizeSealosUrl(host, `${prefix} provider host`))
 
   if (
     url.hostname === 'localhost' ||
@@ -50,7 +51,7 @@ function resolvePrefixedHost (host: string, prefix: string): string {
 function resolveDatabaseHost (options?: { baseUrl?: string }): string {
   const override = process.env.SEALOS_DATABASE_HOST?.trim()
   if (override) {
-    return override.replace(/\/+$/, '')
+    return normalizeSealosUrl(override, 'SEALOS_DATABASE_HOST')
   }
 
   return resolveDbproviderHost(resolveHost(options))
@@ -63,7 +64,7 @@ function resolveTemplateHost (options?: { baseUrl?: string }): string {
 function resolveDevboxHost (options?: { baseUrl?: string }): string {
   const override = process.env.SEALOS_DEVBOX_HOST?.trim()
   if (override) {
-    return override.replace(/\/+$/, '')
+    return normalizeSealosUrl(override, 'SEALOS_DEVBOX_HOST')
   }
 
   return resolveDevboxProviderHost(resolveHost(options))

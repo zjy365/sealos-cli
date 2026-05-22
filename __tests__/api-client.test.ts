@@ -22,4 +22,13 @@ describe('api client host resolution', () => {
     expect(resolveDevboxProviderHost('http://localhost:3000')).toBe('http://localhost:3000')
     expect(resolveDevboxProviderHost('https://devbox.hzh.sealos.run')).toBe('https://devbox.hzh.sealos.run')
   })
+
+  test('rejects non-local http provider hosts', () => {
+    expect(() => resolveTemplateProviderHost('http://hzh.sealos.run'))
+      .toThrow(/template provider host must use https:\/\/ except for localhost/)
+    expect(() => resolveDbproviderHost('http://hzh.sealos.run'))
+      .toThrow(/dbprovider provider host must use https:\/\/ except for localhost/)
+    expect(() => resolveDevboxProviderHost('http://hzh.sealos.run'))
+      .toThrow(/devbox provider host must use https:\/\/ except for localhost/)
+  })
 })

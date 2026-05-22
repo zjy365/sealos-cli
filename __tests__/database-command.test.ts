@@ -12,6 +12,7 @@ import {
   parseIntegerValue,
   parseKeyValueArgs,
   parseNumericValue,
+  resolveConsolePublicConnection,
   summarizeVersions
 } from '../src/commands/database/index.ts'
 
@@ -38,6 +39,46 @@ describe('database command helpers', () => {
       domain: 'dbconn.usw-1.sealos.app',
       nodePort: 41087
     })).toBe('dbconn.usw-1.sealos.app:41087')
+  })
+
+  test('resolves public connection only when public access is enabled', () => {
+    expect(resolveConsolePublicConnection({
+      dbType: 'postgresql',
+      username: 'postgres',
+      password: 'secret',
+      domain: 'dbconn.usw-1.sealos.app',
+      service: {
+        spec: {
+          ports: [{ port: 5432, nodePort: 41085 }]
+        }
+      },
+      fallbackPublicConnection: 'postgresql://postgres:secret@172.16.0.186:41085/app'
+    })).toBe('postgresql://postgres:secret@dbconn.usw-1.sealos.app:41085/?directConnection=true')
+
+    expect(resolveConsolePublicConnection({
+      dbType: 'postgresql',
+      username: 'postgres',
+      password: 'secret',
+      domain: 'dbconn.usw-1.sealos.app',
+      service: {
+        spec: {
+          ports: [{ port: 5432 }]
+        }
+      },
+      fallbackPublicConnection: 'postgresql://postgres:secret@172.16.0.186:41085/app'
+    })).toBeNull()
+
+    expect(resolveConsolePublicConnection({
+      dbType: 'postgresql',
+      username: 'postgres',
+      password: 'secret',
+      service: {
+        spec: {
+          ports: [{ port: 5432, nodePort: 41085 }]
+        }
+      },
+      fallbackPublicConnection: 'postgresql://postgres:secret@dbconn.usw-1.sealos.app:41085/app'
+    })).toBe('postgresql://postgres:secret@dbconn.usw-1.sealos.app:41085/app')
   })
 
   test('normalizes database and log types', () => {

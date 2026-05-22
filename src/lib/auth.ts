@@ -4,6 +4,7 @@ import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import type { SealosAuthData, SealosWorkspace } from '../types/index.ts'
 import { AuthError } from './errors.ts'
+import { normalizeSealosUrl } from './hosts.ts'
 
 export const SEALOS_AUTH_CLIENT_ID = 'af993c98-d19d-4bdc-b338-79b80dc4f8bf'
 export const DEFAULT_SEALOS_REGION = 'https://usw-1.sealos.io'
@@ -113,7 +114,7 @@ export function getAuthPaths (sealosDir = join(homedir(), '.sealos')): SealosAut
 }
 
 export function normalizeRegion (region?: string): string {
-  return (region || process.env.SEALOS_REGION || DEFAULT_SEALOS_REGION).replace(/\/+$/, '')
+  return normalizeSealosUrl(region || process.env.SEALOS_REGION || DEFAULT_SEALOS_REGION, 'Sealos region')
 }
 
 export function createDefaultAuthDependencies (): Required<AuthDependencies> {

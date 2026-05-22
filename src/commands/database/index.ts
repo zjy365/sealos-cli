@@ -3,6 +3,7 @@ import chalk from 'chalk'
 import { createDatabaseClient, resolveDbproviderHost } from '../../lib/api-client.ts'
 import { DEFAULT_SEALOS_REGION, loadAuth } from '../../lib/auth.ts'
 import { type ApiErrorBody, mapApiError } from '../../lib/errors.ts'
+import { normalizeSealosUrl } from '../../lib/hosts.ts'
 import { outputJson, outputTable } from '../../lib/output.ts'
 import { withAuth, withErrorHandling } from '../../lib/with-auth.ts'
 
@@ -155,6 +156,80 @@ export function buildConsolePublicConnection (options: {
   }
 
   return connection
+}
+
+function extractConnectionHost (connection: string): string | null {
+  try {
+    return new URL(connection).hostname || null
+  } catch {
+    const withoutScheme = connection.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+    const afterCredentials = withoutScheme.includes('@') ? withoutScheme.slice(withoutScheme.lastIndexOf('@') + 1) : withoutScheme
+    const withoutPath = afterCredentials.split(/[/?#]/, 1)[0] ?? ''
+
+    if (withoutPath.startsWith('[')) {
+      const end = withoutPath.indexOf(']')
+      return end === -1 ? null : withoutPath.slice(1, end)
+    }
+
+    return withoutPath.split(':', 1)[0] || null
+  }
+}
+
+function isInternalConnectionHost (host: string): boolean {
+  const normalized = host.trim().toLowerCase()
+  if (!normalized) return false
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true
+  if (normalized.endsWith('.svc') || normalized.includes('.svc.')) return true
+  if (normalized.endsWith('.cluster.local') || normalized.endsWith('.local')) return true
+  if (normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')) return true
+
+  const ipv4 = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (!ipv4) return false
+
+  const octets = ipv4.slice(1).map(Number)
+  if (octets.some(octet => octet < 0 || octet > 255)) return false
+
+  const first = octets[0]
+  const second = octets[1]
+  if (first === undefined || second === undefined) return false
+
+  return (
+    first === 10 ||
+    first === 127 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 169 && second === 254) ||
+    (first === 100 && second >= 64 && second <= 127)
+  )
+}
+
+export function resolveConsolePublicConnection (options: {
+  dbType: string
+  username?: string
+  password?: string
+  domain?: string
+  service?: ServiceResponse | null
+  fallbackPublicConnection?: string | null
+}): string | null {
+  const nodePort = options.service?.spec?.ports?.find(port => port.nodePort)?.nodePort
+  if (!nodePort) return null
+
+  const connection = buildConsolePublicConnection({
+    dbType: options.dbType,
+    username: options.username,
+    password: options.password,
+    domain: options.domain,
+    nodePort
+  })
+
+  if (connection) return connection
+
+  const fallbackHost = options.fallbackPublicConnection ? extractConnectionHost(options.fallbackPublicConnection) : null
+  if (options.fallbackPublicConnection && fallbackHost && !isInternalConnectionHost(fallbackHost)) {
+    return options.fallbackPublicConnection
+  }
+
+  return null
 }
 
 export function normalizeLogDbType (type: string): LogDbType {
@@ -362,7 +437,7 @@ function buildPublicAccessResult (action: 'enable-public' | 'disable-public', na
 function getDatabaseProviderHost (): string {
   const override = process.env.SEALOS_DATABASE_HOST?.trim()
   if (override) {
-    return override.replace(/\/+$/, '')
+    return normalizeSealosUrl(override, 'SEALOS_DATABASE_HOST')
   }
 
   let authRegion: string | undefined
@@ -403,14 +478,14 @@ async function fetchConsoleConnectionDetails (
     getLegacyApiData<ClientAppConfigResponse>('/api/platform/getClientAppConfig', headers).catch(() => null)
   ])
 
-  const nodePort = service?.spec?.ports?.find(port => port.nodePort)?.nodePort
-  const publicConnection = buildConsolePublicConnection({
+  const publicConnection = resolveConsolePublicConnection({
     dbType,
     username: secret.username,
     password: secret.password,
     domain: config?.domain,
-    nodePort
-  }) ?? fallbackConnection?.publicConnection ?? null
+    service,
+    fallbackPublicConnection: fallbackConnection?.publicConnection
+  })
 
   return {
     privateConnection: {
@@ -423,6 +498,12 @@ async function fetchConsoleConnectionDetails (
     },
     publicConnection
   }
+}
+
+async function resolveDatabaseConnection (database: any, headers: { Authorization: string }): Promise<ConnectionDetails | null> {
+  if (!database?.type) return database?.connection ?? null
+
+  return await fetchConsoleConnectionDetails(database.name, database.type, database.connection, headers)
 }
 
 async function loadDatabaseConnectionDetails (
@@ -439,9 +520,7 @@ async function loadDatabaseConnectionDetails (
 
   if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
-  if (!data.type) return data.connection ?? null
-
-  return await fetchConsoleConnectionDetails(name, data.type, data.connection, headers)
+  return await resolveDatabaseConnection(data, headers)
 }
 
 export function createDatabaseCommand (): Command {
@@ -648,14 +727,22 @@ export function createDatabaseCommand (): Command {
 
       if (error) throw mapApiError(response.status, error as ApiErrorBody)
 
+      const connection = await resolveDatabaseConnection(data, ctx.auth)
+      const database = connection
+        ? {
+            ...data,
+            connection
+          }
+        : data
+
       ctx.spinner.stop()
 
       if (options.output === 'json') {
-        outputJson(data)
+        outputJson(database)
         return
       }
 
-      printDatabaseDetail(data)
+      printDatabaseDetail(database)
     }))
 
   dbCmd
