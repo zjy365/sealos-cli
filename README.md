@@ -1,6 +1,6 @@
 # Sealos CLI
 
-Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, and templates.
+Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, templates, and object storage.
 
 ## Project Structure
 
@@ -21,6 +21,8 @@ src/
 │   ├── database/             # Database management
 │   │   └── index.ts
 │   ├── template/             # Template management
+│   │   └── index.ts
+│   ├── s3/                   # Object storage and S3 objects
 │   │   └── index.ts
 ├── lib/                       # Shared libraries
 │   ├── api-client.ts         # OpenAPI client factories
@@ -214,6 +216,31 @@ sealos-cli database logs <pod-name> --db-type postgresql --log-type runtimeLog -
 
 Implementation: `src/commands/database/index.ts`
 
+### Object Storage / S3
+
+```bash
+# Bucket management
+sealos-cli s3 buckets
+sealos-cli s3 create-bucket assets --policy private
+sealos-cli s3 get-bucket assets
+sealos-cli s3 update-bucket assets --policy publicRead
+sealos-cli s3 delete-bucket assets
+
+# Credentials and quota
+sealos-cli s3 secret
+sealos-cli s3 rotate-secret
+sealos-cli s3 quota
+
+# S3-compatible object operations
+sealos-cli s3 list private-assets --prefix images/
+sealos-cli s3 upload private-assets ./logo.png --key images/logo.png
+sealos-cli s3 download private-assets images/logo.png ./logo.png
+sealos-cli s3 delete private-assets images/logo.png
+sealos-cli s3 presign private-assets images/logo.png --expires 3600
+```
+
+Implementation: `src/commands/s3/index.ts`, backed by Sealos object storage CRDs and the S3-compatible endpoint returned by `ObjectStorageUser` status.
+
 ## Environment Variables
 
 - `SEALOS_REGION`: Default Sealos region URL for auth and public provider endpoints
@@ -223,7 +250,7 @@ Implementation: `src/commands/database/index.ts`
 
 ## v1 Scope
 
-The v1 command surface is limited to auth, workspace, template, database, and devbox operations. Future modules such as S3/object storage, quota inspection, and application management are intentionally not registered or documented as available commands.
+The v1 command surface includes auth, workspace, template, database, devbox, and S3/object storage operations. Future modules such as standalone quota inspection and application management are intentionally not registered or documented as available commands.
 
 ## Best Practices Implemented
 

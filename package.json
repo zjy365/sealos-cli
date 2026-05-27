@@ -1,7 +1,7 @@
 {
   "name": "sealos-cli",
   "version": "1.1.5",
-  "description": "Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, and templates",
+  "description": "Official CLI tool for Sealos Cloud - Manage auth, workspaces, devboxes, databases, templates, and object storage",
   "types": "dist/main.d.ts",
   "type": "module",
   "bin": {
@@ -65,6 +65,8 @@
     "cloud",
     "devbox",
     "database",
+    "s3",
+    "object-storage",
     "kubernetes",
     "deployment",
     "template",
@@ -79,9 +81,13 @@
     "url": "git+https://github.com/zjy365/sealos-cli.git"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1054.0",
+    "@aws-sdk/s3-request-presigner": "^3.1054.0",
+    "@kubernetes/client-node": "^1.4.0",
     "axios": "^1.15.0",
     "chalk": "^5.2.0",
     "commander": "^14.0.3",
+    "node-fetch": "^2.7.0",
     "openapi-fetch": "^0.17.0",
     "ora": "^9.3.0",
     "table": "^6.8.1"

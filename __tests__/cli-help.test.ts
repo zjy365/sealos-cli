@@ -23,7 +23,7 @@ function collectActionCommands (command: Command, prefix: string[] = []): Array<
 }
 
 describe('help output', () => {
-  test('top-level help only exposes implemented command modules', () => {
+  test('top-level help exposes implemented command modules', () => {
     const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', '--help'], {
       cwd: process.cwd(),
       encoding: 'utf8'
@@ -35,7 +35,7 @@ describe('help output', () => {
     expect(help).toMatch(/devbox/)
     expect(help).toMatch(/database/)
     expect(help).toMatch(/template/)
-    expect(help).not.toMatch(/\bs3\b/)
+    expect(help).toMatch(/\bs3\b/)
     expect(help).not.toMatch(/\bquota\b/)
     expect(help).not.toMatch(/\bapp\b/)
   })
@@ -122,6 +122,17 @@ describe('help output', () => {
       encoding: 'utf8'
     })
     expect(exposeHelp).toMatch(/Enable public access for a database/)
+  })
+
+  test('s3 help documents object storage commands', () => {
+    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 's3', '--help'], {
+      cwd: process.cwd(),
+      encoding: 'utf8'
+    })
+    expect(help).toMatch(/Manage Sealos object storage buckets and S3 objects/)
+    expect(help).toMatch(/create-bucket/)
+    expect(help).toMatch(/rotate-secret/)
+    expect(help).toMatch(/presign/)
   })
 
   test('registered action commands expose JSON as the default output', () => {
