@@ -1,5 +1,12 @@
 # sealos-cli
 
+## 1.1.6
+
+### Patch Changes
+
+- Add S3/object storage commands for buckets, credentials, quotas, objects, and presigned URLs.
+- Speed up CLI help tests to avoid CI timeouts after adding object storage dependencies.
+
 ## 1.1.5
 
 ### Patch Changes

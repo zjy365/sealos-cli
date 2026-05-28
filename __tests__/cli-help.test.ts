@@ -22,12 +22,22 @@ function collectActionCommands (command: Command, prefix: string[] = []): Array<
   })
 }
 
+function commandHelp (...path: string[]): string {
+  const command = path.reduce<Command | undefined>(
+    (current, name) => current?.commands.find(child => child.name() === name || child.aliases().includes(name)),
+    createProgram()
+  )
+
+  if (!command) {
+    throw new Error(`Command not found: ${path.join(' ')}`)
+  }
+
+  return command.helpInformation()
+}
+
 describe('help output', () => {
   test('top-level help exposes implemented command modules', () => {
-    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const help = commandHelp()
 
     expect(help).toMatch(/Usage: sealos-cli/)
     expect(help).toMatch(/auth/)
@@ -73,62 +83,38 @@ describe('help output', () => {
   })
 
   test('login help documents token limited mode', () => {
-    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'login', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const help = commandHelp('login')
     expect(help).toMatch(/Store a regional token without OAuth device login/)
   })
 
   test('workspace help documents real workspace commands', () => {
-    const workspaceHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const workspaceHelp = commandHelp('workspace')
     expect(workspaceHelp).toMatch(/switch/)
     expect(workspaceHelp).toMatch(/list/)
     expect(workspaceHelp).toMatch(/current/)
 
-    const listHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'list', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const listHelp = commandHelp('workspace', 'list')
     expect(listHelp).toMatch(/Output format: json, table/)
 
-    const switchHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'switch', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const switchHelp = commandHelp('workspace', 'switch')
     expect(switchHelp).toMatch(/Workspace id, uid, or team name/)
 
-    const currentHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'workspace', 'current', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const currentHelp = commandHelp('workspace', 'current')
     expect(currentHelp).toMatch(/Output format: json, table/)
   })
 
   test('database help documents public access aliases', () => {
-    const databaseHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'database', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const databaseHelp = commandHelp('database')
     expect(databaseHelp).toMatch(/Usage: sealos-cli database\|db \[options\] \[command\]/)
     expect(databaseHelp).toMatch(/enable-public\|expose/)
     expect(databaseHelp).toMatch(/disable-public\|unexpose/)
 
-    const exposeHelp = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 'database', 'expose', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const exposeHelp = commandHelp('database', 'expose')
     expect(exposeHelp).toMatch(/Enable public access for a database/)
   })
 
   test('s3 help documents object storage commands', () => {
-    const help = execFileSync('node', ['--import', 'tsx', 'src/bin/cli.ts', 's3', '--help'], {
-      cwd: process.cwd(),
-      encoding: 'utf8'
-    })
+    const help = commandHelp('s3')
     expect(help).toMatch(/Manage Sealos object storage buckets and S3 objects/)
     expect(help).toMatch(/create-bucket/)
     expect(help).toMatch(/rotate-secret/)
