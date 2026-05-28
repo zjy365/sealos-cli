@@ -5,6 +5,7 @@ import { createWorkspaceCommand } from './commands/workspace/index.ts'
 import { createDevboxCommand } from './commands/devbox/index.ts'
 import { createDatabaseCommand } from './commands/database/index.ts'
 import { createTemplateCommand } from './commands/template/index.ts'
+import { createS3Command } from './commands/s3/index.ts'
 import { handleError } from './lib/errors.ts'
 import packageJson from '../package.json' with { type: 'json' }
 
@@ -22,6 +23,7 @@ export function createProgram (): Command {
   program.addCommand(createDevboxCommand())
   program.addCommand(createDatabaseCommand())
   program.addCommand(createTemplateCommand())
+  program.addCommand(createS3Command())
 
   return program
 }

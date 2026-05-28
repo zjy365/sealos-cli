@@ -17,9 +17,10 @@ commands/
   devbox/         - devbox operations
   database/       - database management
   template/       - template operations
+  s3/             - object storage and S3 object operations
 ```
 
-Each registered module exports factory functions that create Commander.js command instances. Future placeholder modules may exist in `src/commands/`, but v1 only registers auth, workspace, devbox, database, and template commands.
+Each registered module exports factory functions that create Commander.js command instances. Future placeholder modules may exist in `src/commands/`, but v1 only registers auth, workspace, devbox, database, template, and s3 commands.
 
 ### 2. Shared Libraries (`src/lib/`)
 
@@ -35,6 +36,7 @@ Each registered module exports factory functions that create Commander.js comman
 - Resolves template provider hosts with the `template.` prefix
 - Resolves database provider hosts with the `dbprovider.` prefix
 - Resolves devbox provider hosts with the `devbox.` prefix
+- S3 commands use the active kubeconfig directly for object storage CRDs, then use the returned S3-compatible endpoint for object operations
 
 #### `output.ts` - Output Formatting
 
@@ -207,7 +209,7 @@ export function createExampleCommand(): Command {
 
 ## Future Improvements
 
-1. Implement future S3/object storage, quota, and application commands when APIs are available
+1. Implement future standalone quota and application commands when APIs are available
 2. Implement interactive prompts (inquirer)
 3. Add shell completion scripts
 
