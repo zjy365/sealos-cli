@@ -24,7 +24,7 @@ jobs:
       - name: run tests
         run: npm run test
       - name: coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         if: github.actor != 'dependabot[bot]' && env.CODECOV_TOKEN != ''
         with:
           fail_ci_if_error: true
